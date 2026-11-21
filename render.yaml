@@ -9,7 +9,7 @@ services:
     name: sanjeevani
     runtime: python
     plan: free
-    buildCommand: "./build.sh"
+    buildCommand: "bash build.sh"
     startCommand: "gunicorn sanjeevaniweb.wsgi:application"
     envVars:
       - key: PYTHON_VERSION
