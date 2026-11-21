@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+{% load i18n humanize %}
+
+{% block title %}Sanjeevani – Donate Blood. Save Lives. | സഞ്ജീവനി{% endblock %}
+
+{% block content %}
+
+<!-- ══════════════════ HERO SECTION ══════════════════ -->
+<section class="sj-hero">
+  <div class="sj-hero-bg"></div>
+  <div class="container sj-hero-content">
+    <div class="row align-items-center min-vh-85">
+      <div class="col-lg-6">
+        <div class="sj-hero-badge mb-3">
+          <i class="bi bi-droplet-fill me-2"></i>
+          {% trans "Kerala's Trusted Blood Donor Network" %}
+        </div>
+        <h1 class="sj-hero-title">
+          Donate Blood.<br><span class="text-danger">Save Lives.</span>
+        </h1>
+        <p class="sj-hero-title-ml">ഒരു തുള്ളി രക്തം, ഒരു ജീവന് പ്രതീക്ഷ.</p>
+        <p class="sj-hero-desc">
+          {% trans "Sanjeevani connects people in urgent need of blood with registered voluntary donors across Kerala. Free, fast and community-driven." %}
+        </p>
+        <div class="d-flex flex-wrap gap-3 mt-4">
+          <a href="{% url 'core:donor_directory' %}" class="btn sj-btn-primary btn-lg">
+            <i class="bi bi-search me-2"></i>{% trans "Find Blood Donors" %}
+          </a>
+          <a href="{% url 'core:register' %}" class="btn sj-btn-outline-light btn-lg">
+            <i class="bi bi-droplet-fill me-2"></i>{% trans "Become a Donor" %}
+          </a>
+        </div>
+        <!-- Stats row -->
+        <div class="d-flex flex-wrap gap-4 mt-5">
+          <div class="sj-hero-stat">
+            <div class="sj-hero-stat-num text-danger">{{ total_donors|intcomma }}</div>
+            <div class="sj-hero-stat-label">{% trans "Registered Donors" %}</div>
+          </div>
+          <div class="sj-hero-stat">
+            <div class="sj-hero-stat-num text-success">{{ available_donors|intcomma }}</div>
+            <div class="sj-hero-stat-label">{% trans "Available Now" %}</div>
+          </div>
+          <div class="sj-hero-stat">
+            <div class="sj-hero-stat-num text-primary">14</div>
+            <div class="sj-hero-stat-label">{% trans "Districts Covered" %}</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-lg-6 d-none d-lg-flex justify-content-center">
+        <div class="sj-hero-illustration">
+          <div class="sj-blood-drop-anim">
+            <i class="bi bi-droplet-fill"></i>
+          </div>
+          <div class="sj-hero-cards-float">
+            {% for bg, label in blood_groups %}
+            <div class="sj-float-card {% cycle 'sj-fc-1' 'sj-fc-2' 'sj-fc-3' 'sj-fc-4' 'sj-fc-5' 'sj-fc-6' 'sj-fc-7' 'sj-fc-8' %}">
+              {{ label }}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="sj-hero-wave">
+    <svg viewBox="0 0 1440 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,40 C360,80 1080,0 1440,40 L1440,80 L0,80 Z" fill="#f8f9fa"/>
+    </svg>
+  </div>
+</section>
+
+<!-- ══════════════════ BLOOD GROUP SELECTOR ══════════════════ -->
+<section class="py-5 bg-light">
+  <div class="container">
+    <div class="text-center mb-4">
+      <h2 class="sj-section-title">{% trans "Find by Blood Group" %}</h2>
+      <p class="sj-section-subtitle">{% trans "Click your required blood group to see available donors" %}</p>
+    </div>
+    <div class="row g-3 justify-content-center">
+      {% for bg, label in blood_groups %}
+      <div class="col-6 col-sm-4 col-md-3 col-lg-auto">
+        <a href="{% url 'core:donor_directory' %}?blood_group={{ bg }}&available_only=on"
+           class="sj-blood-group-card text-decoration-none d-block text-center">
+          <div class="sj-bg-icon">
+            <i class="bi bi-droplet-fill"></i>
+          </div>
+          <div class="sj-bg-label">{{ label }}</div>
+          <div class="sj-bg-count">
+            {{ blood_group_counts|default:'' }}
+            {% with count=blood_group_counts %}
+              {% if bg in count %}{{ count|default:0 }}{% else %}0{% endif %}
+            {% endwith %}
+          </div>
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ HOW IT WORKS ══════════════════ -->
+<section class="py-5">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="sj-section-title">{% trans "How Sanjeevani Works" %}</h2>
+      <p class="sj-section-subtitle">{% trans "Simple steps to connect with blood donors" %}</p>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-3 col-sm-6">
+        <div class="sj-step-card text-center">
+          <div class="sj-step-num">1</div>
+          <div class="sj-step-icon"><i class="bi bi-search"></i></div>
+          <h5>{% trans "Search Donors" %}</h5>
+          <p>{% trans "Search by blood group and district to find eligible donors near you." %}</p>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="sj-step-card text-center">
+          <div class="sj-step-num">2</div>
+          <div class="sj-step-icon"><i class="bi bi-telephone-fill"></i></div>
+          <h5>{% trans "Call the Donor" %}</h5>
+          <p>{% trans "Click Call Now to open the dialer and speak directly to the donor." %}</p>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="sj-step-card text-center">
+          <div class="sj-step-num">3</div>
+          <div class="sj-step-icon"><i class="bi bi-check2-circle"></i></div>
+          <h5>{% trans "Confirm Availability" %}</h5>
+          <p>{% trans "Both you and the donor confirm through Sanjeevani to ensure reliability." %}</p>
+        </div>
+      </div>
+      <div class="col-md-3 col-sm-6">
+        <div class="sj-step-card text-center">
+          <div class="sj-step-num">4</div>
+          <div class="sj-step-icon"><i class="bi bi-whatsapp"></i></div>
+          <h5>{% trans "Share Location" %}</h5>
+          <p>{% trans "Share the hospital location via WhatsApp to complete the coordination." %}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ DISTRICT-WISE DONORS ══════════════════ -->
+{% if district_counts %}
+<section class="py-5 bg-light">
+  <div class="container">
+    <div class="text-center mb-4">
+      <h2 class="sj-section-title">{% trans "Donors by District" %}</h2>
+      <p class="sj-section-subtitle">{% trans "Find donors in your district" %}</p>
+    </div>
+    <div class="row g-3">
+      {% for d in district_counts %}
+      <div class="col-6 col-md-4 col-lg-3">
+        <a href="{% url 'core:donor_directory' %}?district={{ d.code }}" class="sj-district-card text-decoration-none d-block">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="sj-district-name">{{ d.name }}</span>
+            <span class="sj-district-count badge bg-danger rounded-pill">{{ d.count }}</span>
+          </div>
+          <div class="progress mt-2" style="height:4px;">
+            <div class="progress-bar bg-danger" style="width: {{ d.count|floatformat:0 }}%"></div>
+          </div>
+        </a>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- ══════════════════ RECENT DONORS ══════════════════ -->
+{% if recent_donors %}
+<section class="py-5">
+  <div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h2 class="sj-section-title mb-1">{% trans "Recently Registered Donors" %}</h2>
+        <p class="sj-section-subtitle mb-0">{% trans "Donors who joined Sanjeevani recently" %}</p>
+      </div>
+      <a href="{% url 'core:donor_directory' %}" class="btn btn-outline-danger btn-sm">
+        {% trans "View All" %} <i class="bi bi-arrow-right ms-1"></i>
+      </a>
+    </div>
+    <div class="row g-4">
+      {% for donor in recent_donors %}
+      <div class="col-md-6 col-lg-4">
+        {% include "donors/_donor_card.html" with donor=donor %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- ══════════════════ WHY DONATE ══════════════════ -->
+<section class="py-5 sj-why-section">
+  <div class="container">
+    <div class="text-center mb-5">
+      <h2 class="sj-section-title">{% trans "Why Donate Blood?" %}</h2>
+      <p class="sj-section-subtitle">{% trans "Your donation can save up to three lives" %}</p>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="sj-why-card">
+          <div class="sj-why-icon"><i class="bi bi-heart-pulse-fill"></i></div>
+          <h5>{% trans "Save Lives" %}</h5>
+          <p>{% trans "Every blood donation can save up to 3 lives. Your one hour can give someone decades more." %}</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="sj-why-card">
+          <div class="sj-why-icon"><i class="bi bi-shield-heart-fill"></i></div>
+          <h5>{% trans "Health Benefits" %}</h5>
+          <p>{% trans "Regular donation reduces risk of heart disease, helps maintain healthy iron levels and refreshes your blood cells." %}</p>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="sj-why-card">
+          <div class="sj-why-icon"><i class="bi bi-people-fill"></i></div>
+          <h5>{% trans "Community Service" %}</h5>
+          <p>{% trans "Be a hero in your community. Blood is always needed — accidents, surgeries and treatments depend on voluntary donors." %}</p>
+        </div>
+      </div>
+    </div>
+    <div class="text-center mt-5">
+      <a href="{% url 'core:register' %}" class="btn sj-btn-primary btn-lg px-5">
+        <i class="bi bi-droplet-fill me-2"></i>{% trans "Register as a Donor Today" %}
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ AWARENESS ══════════════════ -->
+<section class="py-5 bg-danger text-white sj-awareness-section">
+  <div class="container">
+    <div class="row align-items-center">
+      <div class="col-lg-8">
+        <h3 class="fw-bold mb-2">{% trans "Blood is Always Needed" %}</h3>
+        <p class="mb-0 opacity-90">
+          {% trans "Only 7% of the population can donate blood. Kerala needs thousands of voluntary donors. Join Sanjeevani today and be ready when someone needs you." %}
+        </p>
+      </div>
+      <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
+        <a href="{% url 'core:register' %}" class="btn btn-light btn-lg text-danger fw-semibold">
+          <i class="bi bi-droplet-fill me-2"></i>{% trans "Join Now — It's Free" %}
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════ ABOUT SNIPPET ══════════════════ -->
+<section class="py-5 bg-light">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-lg-6">
+        <div class="sj-about-badge mb-3">{% trans "About Sanjeevani" %}</div>
+        <h2 class="sj-section-title">{% trans "A Community Platform for Kerala" %}</h2>
+        <p>
+          {% trans "Sanjeevani (സഞ്ജീവനി) is a voluntary blood donor connection platform built for the people of Kerala. We believe that finding blood in an emergency should never be difficult." %}
+        </p>
+        <p>
+          {% trans "Our platform connects registered voluntary donors with people in urgent need, using simple phone calls confirmed through our system — ensuring trust and reliability on both sides." %}
+        </p>
+        <a href="{% url 'core:about' %}" class="btn btn-outline-danger mt-2">
+          {% trans "Learn More About Us" %} <i class="bi bi-arrow-right ms-1"></i>
+        </a>
+      </div>
+      <div class="col-lg-6">
+        <div class="row g-3">
+          <div class="col-6">
+            <div class="sj-about-stat-card bg-danger text-white">
+              <i class="bi bi-people-fill sj-about-stat-icon"></i>
+              <div class="sj-about-stat-num">{{ total_donors }}+</div>
+              <div>{% trans "Registered Donors" %}</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="sj-about-stat-card bg-success text-white">
+              <i class="bi bi-check-circle-fill sj-about-stat-icon"></i>
+              <div class="sj-about-stat-num">{{ available_donors }}+</div>
+              <div>{% trans "Available Donors" %}</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="sj-about-stat-card bg-primary text-white">
+              <i class="bi bi-geo-alt-fill sj-about-stat-icon"></i>
+              <div class="sj-about-stat-num">14</div>
+              <div>{% trans "Districts" %}</div>
+            </div>
+          </div>
+          <div class="col-6">
+            <div class="sj-about-stat-card bg-warning text-dark">
+              <i class="bi bi-droplet-fill sj-about-stat-icon"></i>
+              <div class="sj-about-stat-num">8</div>
+              <div>{% trans "Blood Groups" %}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

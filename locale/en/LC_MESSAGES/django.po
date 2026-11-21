@@ -1,0 +1,40 @@
+# msgid ""
+# msgstr ""
+# "Content-Type: text/plain; charset=UTF-8\n"
+# "Content-Transfer-Encoding: 8bit\n"
+
+msgid "Home"
+msgstr "Home"
+
+msgid "Find Donors"
+msgstr "Find Donors"
+
+msgid "Register as Donor"
+msgstr "Register as Donor"
+
+msgid "About Us"
+msgstr "About Us"
+
+msgid "Contact"
+msgstr "Contact"
+
+msgid "Login"
+msgstr "Login"
+
+msgid "Logout"
+msgstr "Logout"
+
+msgid "Donate Blood. Save Lives."
+msgstr "Donate Blood. Save Lives."
+
+msgid "Register"
+msgstr "Register"
+
+msgid "English"
+msgstr "English"
+
+msgid "Available"
+msgstr "Available"
+
+msgid "Unavailable"
+msgstr "Unavailable"

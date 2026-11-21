@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Edit Profile" %} – Sanjeevani{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+      <div class="sj-form-card">
+        <div class="text-center mb-4">
+          <h3><i class="bi bi-pencil-fill text-danger me-2"></i>{% trans "Edit Donor Profile" %}</h3>
+        </div>
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label fw-semibold">{% trans "Full Name" %}</label>
+              {{ form.full_name }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">{% trans "Blood Group" %}</label>
+              {{ form.blood_group }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">{% trans "District" %}</label>
+              {{ form.district }}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">{% trans "Locality" %}</label>
+              {{ form.locality }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label fw-semibold">{% trans "Last Donation Date" %}</label>
+              {{ form.last_donation_date }}
+            </div>
+          </div>
+          <hr class="my-4">
+          <h6 class="fw-semibold mb-3">{% trans "Privacy & Availability Settings" %}</h6>
+          <div class="d-flex flex-column gap-3">
+            <div class="form-check">
+              {{ form.is_available }}
+              <label class="form-check-label ms-2">{% trans "I am currently available to donate blood" %}</label>
+            </div>
+            <div class="form-check">
+              {{ form.show_in_directory }}
+              <label class="form-check-label ms-2">{% trans "Show my profile in donor directory" %}</label>
+            </div>
+            <div class="form-check">
+              {{ form.share_contact }}
+              <label class="form-check-label ms-2">{% trans "Allow sharing my contact number for calls and WhatsApp" %}</label>
+            </div>
+            <div class="form-check">
+              {{ form.show_last_donation_date }}
+              <label class="form-check-label ms-2">{% trans "Show my last donation date in directory" %}</label>
+            </div>
+          </div>
+          <div class="d-grid mt-4">
+            <button type="submit" class="btn sj-btn-primary btn-lg">
+              <i class="bi bi-save-fill me-2"></i>{% trans "Save Changes" %}
+            </button>
+          </div>
+        </form>
+        <div class="text-center mt-3">
+          <a href="{% url 'core:donor_dashboard' %}" class="btn btn-link text-secondary">
+            <i class="bi bi-arrow-left me-1"></i>{% trans "Back to Dashboard" %}
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

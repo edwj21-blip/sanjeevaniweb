@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Share Hospital Location" %} – Sanjeevani{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+      <div class="sj-form-card">
+        <div class="text-center mb-4">
+          <div class="sj-step-icon-lg text-success mb-2"><i class="bi bi-geo-alt-fill"></i></div>
+          <h3>{% trans "Share Hospital Location" %}</h3>
+          <p class="text-muted">{% trans "Enter the hospital details manually. These will be sent to the donor via WhatsApp." %}</p>
+        </div>
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% trans "Hospital Name" %} <span class="text-danger">*</span></label>
+            {{ form.hospital_name }}
+            {% if form.hospital_name.errors %}
+              <div class="text-danger small mt-1">{{ form.hospital_name.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% trans "District" %} <span class="text-danger">*</span></label>
+            {{ form.district }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% trans "Full Hospital Address" %} <span class="text-danger">*</span></label>
+            {{ form.full_address }}
+            {% if form.full_address.errors %}
+              <div class="text-danger small mt-1">{{ form.full_address.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">{% trans "Google Maps Link" %} <span class="text-danger">*</span></label>
+            {{ form.google_maps_link }}
+            <div class="form-text">{% trans "Copy the link from Google Maps and paste it here." %}</div>
+            {% if form.google_maps_link.errors %}
+              <div class="text-danger small mt-1">{{ form.google_maps_link.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="d-grid">
+            <button type="submit" class="btn sj-btn-primary btn-lg">
+              <i class="bi bi-eye me-2"></i>{% trans "Preview & Prepare WhatsApp Message" %}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

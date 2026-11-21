@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% block title %}{% trans "Privacy Policy" %} – Sanjeevani{% endblock %}
+{% block content %}
+<div class="sj-page-header py-4 text-center">
+  <div class="container">
+    <h1 class="sj-page-title">{% trans "Privacy Policy" %}</h1>
+    <p class="sj-page-subtitle">{% trans "How we protect your information" %}</p>
+  </div>
+</div>
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="sj-form-card">
+        <h5>{% trans "Information We Collect" %}</h5>
+        <p>{% trans "When you register as a donor, we collect your name, mobile number, blood group, district, locality, and optional email address. We use this information solely to connect you with people who need blood." %}</p>
+
+        <h5 class="mt-4">{% trans "How We Use Your Information" %}</h5>
+        <ul>
+          <li>{% trans "To display your profile in the donor directory (only if you consent)." %}</li>
+          <li>{% trans "To enable direct phone calls and WhatsApp contact (only if you consent)." %}</li>
+          <li>{% trans "To send you notifications about contact requests." %}</li>
+          <li>{% trans "To improve the Sanjeevani platform." %}</li>
+        </ul>
+
+        <h5 class="mt-4">{% trans "Your Control" %}</h5>
+        <p>{% trans "You can control your visibility in the directory, whether your contact number is shared, and whether your donation history is shown. You can update these settings at any time from your donor dashboard." %}</p>
+
+        <h5 class="mt-4">{% trans "Data Security" %}</h5>
+        <p>{% trans "All passwords are securely hashed. We use CSRF protection on all forms. Your data is stored in a secure database and is never sold to third parties." %}</p>
+
+        <h5 class="mt-4">{% trans "Contact" %}</h5>
+        <p>{% trans "For privacy concerns, contact us at" %} <a href="mailto:privacy@sanjeevani.kerala">privacy@sanjeevani.kerala</a></p>
+
+        <p class="text-muted small mt-4">{% trans "Last updated: November 2024" %}</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

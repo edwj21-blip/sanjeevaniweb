@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "About Us" %} – Sanjeevani{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<div class="sj-page-header py-5 text-center">
+  <div class="container">
+    <h1 class="sj-page-title"><i class="bi bi-info-circle-fill text-danger me-2"></i>{% trans "About Sanjeevani" %}</h1>
+    <p class="sj-page-subtitle">{% trans "Kerala's trusted voluntary blood donor connection platform" %}</p>
+  </div>
+</div>
+
+<div class="container py-5">
+  <div class="row g-5 align-items-center mb-5">
+    <div class="col-lg-6">
+      <div class="sj-about-badge mb-3">{% trans "Our Story" %}</div>
+      <h2 class="sj-section-title">{% trans "Born from a Community Need" %}</h2>
+      <p>{% trans "Sanjeevani (സഞ്ജീവനി) means 'life-giving' in Malayalam and Sanskrit. We built this platform after witnessing how difficult it was for families to find blood donors in emergencies across Kerala." %}</p>
+      <p>{% trans "Our mission is simple: make it easy for anyone in Kerala to find a voluntary blood donor within minutes, using nothing more than a smartphone." %}</p>
+      <p>{% trans "We believe that technology can save lives when it is designed for ordinary people — not just the tech-savvy." %}</p>
+    </div>
+    <div class="col-lg-6">
+      <div class="row g-3">
+        <div class="col-6">
+          <div class="sj-about-stat-card bg-danger text-white text-center p-4">
+            <i class="bi bi-people-fill fs-2 mb-2 d-block"></i>
+            <div class="fs-2 fw-bold">{{ total_donors }}+</div>
+            <div>{% trans "Registered Donors" %}</div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="sj-about-stat-card bg-success text-white text-center p-4">
+            <i class="bi bi-check-circle-fill fs-2 mb-2 d-block"></i>
+            <div class="fs-2 fw-bold">{{ available_donors }}+</div>
+            <div>{% trans "Available Now" %}</div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="sj-about-stat-card bg-primary text-white text-center p-4">
+            <i class="bi bi-geo-alt-fill fs-2 mb-2 d-block"></i>
+            <div class="fs-2 fw-bold">14</div>
+            <div>{% trans "Districts" %}</div>
+          </div>
+        </div>
+        <div class="col-6">
+          <div class="sj-about-stat-card bg-warning text-dark text-center p-4">
+            <i class="bi bi-droplet-fill fs-2 mb-2 d-block"></i>
+            <div class="fs-2 fw-bold">8</div>
+            <div>{% trans "Blood Groups" %}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mission -->
+  <div class="row g-4 mb-5">
+    <div class="col-md-4">
+      <div class="sj-why-card text-center">
+        <div class="sj-why-icon"><i class="bi bi-bullseye"></i></div>
+        <h5>{% trans "Our Mission" %}</h5>
+        <p>{% trans "Connect every person in Kerala who needs blood with a willing voluntary donor within the shortest possible time." %}</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="sj-why-card text-center">
+        <div class="sj-why-icon"><i class="bi bi-eye-fill"></i></div>
+        <h5>{% trans "Our Vision" %}</h5>
+        <p>{% trans "A Kerala where no one dies because they could not find blood. A state where voluntary blood donation is a proud community tradition." %}</p>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="sj-why-card text-center">
+        <div class="sj-why-icon"><i class="bi bi-shield-check-fill"></i></div>
+        <h5>{% trans "Our Values" %}</h5>
+        <p>{% trans "Privacy, trust, accessibility and community service. We never sell donor data. We never charge for the service." %}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- How we're different -->
+  <div class="sj-info-box mb-5">
+    <h4 class="mb-3"><i class="bi bi-star-fill text-warning me-2"></i>{% trans "What Makes Sanjeevani Different" %}</h4>
+    <ul class="sj-checklist">
+      <li><i class="bi bi-check-circle-fill text-success me-2"></i>{% trans "Two-sided confirmation system — both caller and donor confirm, reducing false alarms." %}</li>
+      <li><i class="bi bi-check-circle-fill text-success me-2"></i>{% trans "Separate WhatsApp messages for confirmation and hospital location — clear and organised." %}</li>
+      <li><i class="bi bi-check-circle-fill text-success me-2"></i>{% trans "No admin approval needed — donors appear immediately after registration." %}</li>
+      <li><i class="bi bi-check-circle-fill text-success me-2"></i>{% trans "Full bilingual support — Malayalam and English throughout the platform." %}</li>
+      <li><i class="bi bi-check-circle-fill text-success me-2"></i>{% trans "Mobile-first design — built for ordinary smartphones, not just computers." %}</li>
+      <li><i class="bi bi-check-circle-fill text-success me-2"></i>{% trans "Completely free — no charges, no subscriptions, no advertisements." %}</li>
+    </ul>
+  </div>
+
+  <div class="text-center">
+    <a href="{% url 'core:register' %}" class="btn sj-btn-primary btn-lg me-3">
+      <i class="bi bi-droplet-fill me-2"></i>{% trans "Register as Donor" %}
+    </a>
+    <a href="{% url 'core:contact' %}" class="btn btn-outline-danger btn-lg">
+      <i class="bi bi-envelope-fill me-2"></i>{% trans "Contact Us" %}
+    </a>
+  </div>
+</div>
+{% endblock %}

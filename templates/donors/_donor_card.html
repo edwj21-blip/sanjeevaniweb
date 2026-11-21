@@ -1,0 +1,37 @@
+{% load i18n %}
+<div class="sj-donor-card h-100">
+  <div class="sj-donor-card-header">
+    <div class="sj-blood-badge">{{ donor.blood_group }}</div>
+    <div class="sj-avail-badge {% if donor.is_available %}sj-avail-yes{% else %}sj-avail-no{% endif %}">
+      <i class="bi {% if donor.is_available %}bi-circle-fill{% else %}bi-circle{% endif %} me-1" style="font-size:0.5rem;vertical-align:middle;"></i>
+      {% if donor.is_available %}{% trans "Available" %}{% else %}{% trans "Unavailable" %}{% endif %}
+    </div>
+  </div>
+  <div class="sj-donor-card-body">
+    <h5 class="sj-donor-name">{{ donor.get_display_name }}</h5>
+    <div class="sj-donor-info">
+      <span><i class="bi bi-geo-alt-fill text-danger me-1"></i>{{ donor.locality }}, {{ donor.get_district_display }}</span>
+    </div>
+    {% if donor.show_last_donation_date and donor.last_donation_date %}
+    <div class="sj-donor-info">
+      <span><i class="bi bi-calendar3 text-secondary me-1"></i>{% trans "Last Donated" %}: {{ donor.last_donation_date }}</span>
+    </div>
+    {% endif %}
+  </div>
+  <div class="sj-donor-card-actions">
+    {% if user.is_authenticated %}
+      <a href="{% url 'core:initiate_contact' donor.id %}" class="btn sj-btn-call btn-sm flex-fill">
+        <i class="bi bi-telephone-fill me-1"></i>{% trans "Contact" %}
+      </a>
+      {% if donor.share_contact %}
+      <a href="tel:{{ donor.mobile }}" class="btn sj-btn-whatsapp btn-sm flex-fill" onclick="logCall({{ donor.id }})">
+        <i class="bi bi-telephone me-1"></i>{% trans "Call" %}
+      </a>
+      {% endif %}
+    {% else %}
+      <a href="{% url 'core:login' %}?next={% url 'core:donor_directory' %}" class="btn sj-btn-call btn-sm w-100">
+        <i class="bi bi-box-arrow-in-right me-1"></i>{% trans "Login to Contact" %}
+      </a>
+    {% endif %}
+  </div>
+</div>

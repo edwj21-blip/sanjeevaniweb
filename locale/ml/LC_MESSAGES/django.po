@@ -1,0 +1,174 @@
+# Malayalam translations for Sanjeevani
+# msgid ""
+# msgstr ""
+# "Content-Type: text/plain; charset=UTF-8\n"
+# "Content-Transfer-Encoding: 8bit\n"
+# "Language: ml\n"
+
+msgid "Home"
+msgstr "ഹോം"
+
+msgid "Find Donors"
+msgstr "ഡോണർമാരെ കണ്ടെത്തുക"
+
+msgid "Register as Donor"
+msgstr "ഡോണറായി രജിസ്റ്റർ ചെയ്യുക"
+
+msgid "About Us"
+msgstr "ഞങ്ങളെക്കുറിച്ച്"
+
+msgid "Contact"
+msgstr "ബന്ധപ്പെടുക"
+
+msgid "Login"
+msgstr "ലോഗിൻ"
+
+msgid "Logout"
+msgstr "ലോഗ്ഔട്ട്"
+
+msgid "Donate Blood. Save Lives."
+msgstr "രക്തം ദാനം ചെയ്യൂ. ജീവൻ രക്ഷിക്കൂ."
+
+msgid "Register"
+msgstr "രജിസ്റ്റർ"
+
+msgid "English"
+msgstr "English"
+
+msgid "Available"
+msgstr "ലഭ്യമാണ്"
+
+msgid "Unavailable"
+msgstr "ലഭ്യമല്ല"
+
+msgid "Find Blood Donors"
+msgstr "ബ്ലഡ് ഡോണർമാരെ കണ്ടെത്തുക"
+
+msgid "Become a Donor"
+msgstr "ഡോണറാകുക"
+
+msgid "Registered Donors"
+msgstr "രജിസ്റ്റർ ചെയ്ത ഡോണർമാർ"
+
+msgid "Available Now"
+msgstr "ഇപ്പോൾ ലഭ്യം"
+
+msgid "Districts Covered"
+msgstr "ഉൾപ്പെടുത്തിയ ജില്ലകൾ"
+
+msgid "Kerala's Trusted Blood Donor Network"
+msgstr "കേരളത്തിന്റെ വിശ്വസ്ത ബ്ലഡ് ഡോണർ നെറ്റ്‌വർക്ക്"
+
+msgid "Call Now"
+msgstr "ഇപ്പോൾ വിളിക്കൂ"
+
+msgid "Contact"
+msgstr "ബന്ധപ്പെടുക"
+
+msgid "Login to Contact"
+msgstr "ബന്ധപ്പെടാൻ ലോഗിൻ ചെയ്യുക"
+
+msgid "Blood Group"
+msgstr "ബ്ലഡ് ഗ്രൂപ്പ്"
+
+msgid "District"
+msgstr "ജില്ല"
+
+msgid "Locality"
+msgstr "പ്രദേശം"
+
+msgid "Full Name"
+msgstr "പൂർണ്ണ നാമം"
+
+msgid "Mobile Number"
+msgstr "മൊബൈൽ നമ്പർ"
+
+msgid "Password"
+msgstr "പാസ്‌വേഡ്"
+
+msgid "Confirm Password"
+msgstr "പാസ്‌വേഡ് സ്ഥിരീകരിക്കുക"
+
+msgid "Registration successful! Welcome to Sanjeevani."
+msgstr "രജിസ്ട്രേഷൻ വിജയകരം! സഞ്ജീവനിയിലേക്ക് സ്വാഗതം."
+
+msgid "Invalid mobile number or password."
+msgstr "അസാധുവായ മൊബൈൽ നമ്പർ അല്ലെങ്കിൽ പാസ്‌വേഡ്."
+
+msgid "You have been logged out."
+msgstr "നിങ്ങൾ ലോഗ്ഔട്ട് ചെയ്തു."
+
+msgid "Donor Confirmed!"
+msgstr "ഡോണർ സ്ഥിരീകരിച്ചു!"
+
+msgid "Donor Unavailable."
+msgstr "ഡോണർ ലഭ്യമല്ല."
+
+msgid "The donor is willing to donate blood."
+msgstr "ഡോണർ രക്തം ദാനം ചെയ്യാൻ തയ്യാറാണ്."
+
+msgid "Please search for another donor."
+msgstr "മറ്റൊരു ഡോണറെ തിരയുക."
+
+msgid "Send Confirmation via WhatsApp"
+msgstr "WhatsApp വഴി സ്ഥിരീകരണം അയക്കൂ"
+
+msgid "Share Hospital Location via WhatsApp"
+msgstr "WhatsApp വഴി ആശുപത്രി ലൊക്കേഷൻ ഷെയർ ചെയ്യൂ"
+
+msgid "Donor Dashboard"
+msgstr "ഡോണർ ഡാഷ്‌ബോർഡ്"
+
+msgid "My Requests"
+msgstr "എന്റെ അഭ്യർത്ഥനകൾ"
+
+msgid "Edit Profile"
+msgstr "പ്രൊഫൈൽ എഡിറ്റ് ചെയ്യുക"
+
+msgid "Admin Panel"
+msgstr "അഡ്മിൻ പാനൽ"
+
+msgid "Save Changes"
+msgstr "മാറ്റങ്ങൾ സേവ് ചെയ്യുക"
+
+msgid "Back to Dashboard"
+msgstr "ഡാഷ്‌ബോർഡിലേക്ക് തിരികെ"
+
+msgid "No notifications"
+msgstr "അറിയിപ്പുകൾ ഇല്ല"
+
+msgid "Mark All Read"
+msgstr "എല്ലാം വായിച്ചതായി അടയാളപ്പെടുത്തുക"
+
+msgid "View All"
+msgstr "എല്ലാം കാണുക"
+
+msgid "Quick Links"
+msgstr "ദ്രുത ലിങ്കുകൾ"
+
+msgid "Support"
+msgstr "സഹായം"
+
+msgid "Statistics"
+msgstr "സ്ഥിതിവിവരങ്ങൾ"
+
+msgid "Emergency Contact"
+msgstr "അടിയന്തര ബന്ധം"
+
+msgid "Donors"
+msgstr "ഡോണർമാർ"
+
+msgid "Districts"
+msgstr "ജില്ലകൾ"
+
+msgid "All rights reserved."
+msgstr "എല്ലാ അവകാശങ്ങളും നിക്ഷിപ്തമാണ്."
+
+msgid "Made with love for Kerala"
+msgstr "കേരളത്തോടുള്ള സ്നേഹത്തോടെ നിർമ്മിച്ചത്"
+
+msgid "Privacy Policy"
+msgstr "സ്വകാര്യതാ നയം"
+
+msgid "Terms of Use"
+msgstr "ഉപയോഗ നിബന്ധനകൾ"

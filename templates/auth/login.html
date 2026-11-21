@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Login" %} – Sanjeevani{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-md-5 col-lg-4">
+      <div class="text-center mb-4">
+        <div class="sj-auth-logo"><i class="bi bi-droplet-fill"></i></div>
+        <h2 class="sj-auth-title">{% trans "Login to Sanjeevani" %}</h2>
+        <p class="text-muted">{% trans "Use your registered mobile number and password" %}</p>
+      </div>
+
+      <div class="sj-form-card">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{% trans "Mobile Number" %}</label>
+            {{ form.mobile }}
+            {% if form.mobile.errors %}
+              <div class="text-danger small mt-1">{{ form.mobile.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">{% trans "Password" %}</label>
+            {{ form.password }}
+            {% if form.password.errors %}
+              <div class="text-danger small mt-1">{{ form.password.errors.0 }}</div>
+            {% endif %}
+          </div>
+          <div class="d-grid">
+            <button type="submit" class="btn sj-btn-primary btn-lg">
+              <i class="bi bi-box-arrow-in-right me-2"></i>{% trans "Login" %}
+            </button>
+          </div>
+        </form>
+
+        <div class="text-center mt-4">
+          <p class="text-muted">{% trans "New to Sanjeevani?" %} <a href="{% url 'core:register' %}" class="text-danger fw-semibold">{% trans "Register as Donor" %}</a></p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
