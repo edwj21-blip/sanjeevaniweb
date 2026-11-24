@@ -5,6 +5,7 @@ Usage: python manage.py create_sample_data
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from core.models import DonorProfile
+from core.services import record_donation, recalc_donor
 from datetime import date, timedelta
 import random
 
@@ -46,19 +47,21 @@ class Command(BaseCommand):
                 last_name=parts[1] if len(parts) > 1 else '',
             )
 
-            last_donation = date.today() - timedelta(days=random.randint(100, 365))
-            DonorProfile.objects.create(
+            donor = DonorProfile.objects.create(
                 user=user,
                 mobile=d['mobile'],
+                date_of_birth=date(date.today().year - random.randint(20, 50), random.randint(1, 12), random.randint(1, 28)),
                 blood_group=d['bg'],
                 district=d['district'],
                 locality=d['locality'],
-                last_donation_date=last_donation,
-                is_available=random.choice([True, True, True, False]),
                 show_in_directory=True,
                 share_contact=True,
+                health_declaration=True,
                 show_last_donation_date=random.choice([True, False]),
             )
+            # Mix of recent donors (Unavailable) and older ones (Available) - status is calculated.
+            days_ago = random.choice([10, 30, 60, 120, 200, 365])
+            record_donation(donor, date.today() - timedelta(days=days_ago), source='admin')
             self.stdout.write(self.style.SUCCESS(f"  Created: {d['name']} ({d['bg']}) - {d['district']}"))
             created += 1
 

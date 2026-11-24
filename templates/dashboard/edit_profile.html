@@ -1,73 +1,28 @@
 {% extends "base.html" %}
-{% load i18n %}
-
-{% block title %}{% trans "Edit Profile" %} – Sanjeevani{% endblock %}
-
+{% load sj %}
+{% block title %}{% t "Edit Profile" %} – SANJEEVANI{% endblock %}
 {% block content %}
-<div class="container py-5">
-  <div class="row justify-content-center">
-    <div class="col-lg-7">
-      <div class="sj-form-card">
-        <div class="text-center mb-4">
-          <h3><i class="bi bi-pencil-fill text-danger me-2"></i>{% trans "Edit Donor Profile" %}</h3>
-        </div>
-        <form method="post" novalidate>
-          {% csrf_token %}
-          <div class="row g-3">
-            <div class="col-12">
-              <label class="form-label fw-semibold">{% trans "Full Name" %}</label>
-              {{ form.full_name }}
-            </div>
-            <div class="col-md-4">
-              <label class="form-label fw-semibold">{% trans "Blood Group" %}</label>
-              {{ form.blood_group }}
-            </div>
-            <div class="col-md-4">
-              <label class="form-label fw-semibold">{% trans "District" %}</label>
-              {{ form.district }}
-            </div>
-            <div class="col-md-4">
-              <label class="form-label fw-semibold">{% trans "Locality" %}</label>
-              {{ form.locality }}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">{% trans "Last Donation Date" %}</label>
-              {{ form.last_donation_date }}
-            </div>
-          </div>
-          <hr class="my-4">
-          <h6 class="fw-semibold mb-3">{% trans "Privacy & Availability Settings" %}</h6>
-          <div class="d-flex flex-column gap-3">
-            <div class="form-check">
-              {{ form.is_available }}
-              <label class="form-check-label ms-2">{% trans "I am currently available to donate blood" %}</label>
-            </div>
-            <div class="form-check">
-              {{ form.show_in_directory }}
-              <label class="form-check-label ms-2">{% trans "Show my profile in donor directory" %}</label>
-            </div>
-            <div class="form-check">
-              {{ form.share_contact }}
-              <label class="form-check-label ms-2">{% trans "Allow sharing my contact number for calls and WhatsApp" %}</label>
-            </div>
-            <div class="form-check">
-              {{ form.show_last_donation_date }}
-              <label class="form-check-label ms-2">{% trans "Show my last donation date in directory" %}</label>
-            </div>
-          </div>
-          <div class="d-grid mt-4">
-            <button type="submit" class="btn sj-btn-primary btn-lg">
-              <i class="bi bi-save-fill me-2"></i>{% trans "Save Changes" %}
-            </button>
-          </div>
-        </form>
-        <div class="text-center mt-3">
-          <a href="{% url 'core:donor_dashboard' %}" class="btn btn-link text-secondary">
-            <i class="bi bi-arrow-left me-1"></i>{% trans "Back to Dashboard" %}
-          </a>
-        </div>
+<div class="container py-4" style="max-width:640px">
+  <div class="sj-card sj-card-body p-4">
+    <h3>{% t "Edit Profile" %}</h3>
+    <p class="small text-muted">{% t "Your availability is calculated automatically from your donation history and cannot be changed by hand." %}</p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% t "Full Name" as l %}{% include "_field.html" with field=form.full_name label=l %}
+      {% t "Date of Birth" as l %}{% include "_field.html" with field=form.date_of_birth label=l %}
+      <div id="dobLive" class="dob-live" aria-live="polite" style="margin-top:-.8rem;margin-bottom:1rem"></div>
+      <div class="row">
+        <div class="col-md-4">{% t "Blood Group" as l %}{% include "_field.html" with field=form.blood_group label=l %}</div>
+        <div class="col-md-4">{% t "District" as l %}{% include "_field.html" with field=form.district label=l %}</div>
+        <div class="col-md-4">{% t "Locality" as l %}{% include "_field.html" with field=form.locality label=l %}</div>
       </div>
-    </div>
+      {% t "I confirm that I am in good health and meet the blood donation eligibility conditions." as l %}{% include "_check.html" with field=form.health_declaration label=l %}
+      {% t "Show my profile in the public donor search" as l %}{% include "_check.html" with field=form.show_in_directory label=l %}
+      {% t "I consent to be contacted by people who need blood." as l %}{% include "_check.html" with field=form.share_contact label=l %}
+      {% t "Show my last donation date publicly" as l %}{% include "_check.html" with field=form.show_last_donation_date label=l %}
+      <button class="btn btn-sj btn-lg w-100 mt-3">{% t "Save" %}</button>
+      <a href="{% url 'core:donor_dashboard' %}" class="btn btn-link w-100">{% t "Cancel" %}</a>
+    </form>
   </div>
 </div>
 {% endblock %}

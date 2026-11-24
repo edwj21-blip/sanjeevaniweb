@@ -1,179 +1,69 @@
 {% extends "base.html" %}
-{% load i18n %}
-
-{% block title %}{% trans "Donor Dashboard" %} – Sanjeevani{% endblock %}
-
+{% load sj %}
+{% block title %}{% t "My Donor Profile" %} – SANJEEVANI{% endblock %}
 {% block content %}
-<div class="container py-4">
-  <!-- Welcome -->
-  <div class="sj-dash-header mb-4">
-    <div class="row align-items-center">
-      <div class="col">
-        <h2 class="sj-dash-title">
-          <i class="bi bi-droplet-fill text-danger me-2"></i>
-          {% trans "Welcome," %} {{ user.get_full_name|default:user.username }}
-        </h2>
-        <p class="text-muted mb-0">{% trans "Donor Dashboard" %} – {{ profile.blood_group }} | {{ profile.get_district_display }}</p>
-      </div>
-      <div class="col-auto">
-        <div class="sj-avail-toggle">
-          <span class="me-2">{% trans "Available to Donate:" %}</span>
-          <span class="badge {% if profile.is_available %}bg-success{% else %}bg-secondary{% endif %} fs-6">
-            {% if profile.is_available %}{% trans "Yes" %}{% else %}{% trans "No" %}{% endif %}
-          </span>
+<div class="page-head"><div class="container">
+  <h2 class="mb-1">{{ donor.user.get_full_name|default:donor.user.username }}</h2>
+  <p class="sj-lead mb-0">{% t "My Donor Profile" %}</p>
+</div></div>
+<div class="container">
+  {% if needs_dob %}
+  <div class="alert alert-warning d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <span>{% t "Please add your date of birth. Donors without a verified age (18+) are not shown in the public search." %}</span>
+    <a href="{% url 'core:edit_profile' %}" class="btn btn-sj btn-sm">{% t "Add date of birth" %}</a>
+  </div>
+  {% endif %}
+  {% if donor.eligibility_hold %}
+  <div class="alert alert-info">{% t "An eligibility restriction is currently applied to your profile by the administrator. You will stay Unavailable until it is lifted." %}</div>
+  {% endif %}
+  {% if not cfg.is_validated %}<!-- eligibility interval not yet validated by admin -->{% endif %}
+
+  <div class="status-banner {% if donor.is_available %}avail{% else %}unavail{% endif %} mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      {% if donor.is_available %}
+        <span class="badge-avail fs-6"><i class="bi bi-check-circle-fill"></i> {% t "Available" %}</span>
+        <div class="small mt-1">{% t "You are visible as Available. Your status updates automatically." %}</div>
+      {% else %}
+        <span class="badge-unavail fs-6"><i class="bi bi-x-circle-fill"></i> {% t "Unavailable" %}</span>
+        <div class="small mt-1">
+          {% if donor.next_eligible_date %}{% t "You will automatically become Available on" %} <strong>{{ donor.next_eligible_date|date:"d M Y" }}</strong>.
+          {% else %}{% t "Your status will update automatically when the conditions are met." %}{% endif %}
         </div>
-      </div>
+      {% endif %}
     </div>
+    <a href="{% url 'core:donation_update' %}" class="btn btn-sj"><i class="bi bi-droplet-fill"></i> {% t "Update Donation Details" %}</a>
   </div>
 
   <div class="row g-4">
-    <!-- Left: Profile card -->
-    <div class="col-lg-4">
-      <div class="sj-dash-card h-100">
-        <div class="sj-dash-card-header">
-          <i class="bi bi-person-fill me-2"></i>{% trans "My Profile" %}
-        </div>
-        <div class="p-4">
-          <div class="text-center mb-4">
-            <div class="sj-profile-avatar">{{ profile.blood_group }}</div>
-            <h5 class="mt-2 mb-0">{{ user.get_full_name }}</h5>
-            <p class="text-muted small">@{{ user.username }}</p>
-          </div>
-          <ul class="list-unstyled sj-profile-list">
-            <li><i class="bi bi-telephone-fill text-danger"></i> {{ profile.mobile }}</li>
-            <li><i class="bi bi-geo-alt-fill text-danger"></i> {{ profile.locality }}, {{ profile.get_district_display }}</li>
-            <li><i class="bi bi-droplet-fill text-danger"></i> {{ profile.blood_group }}</li>
-            {% if profile.last_donation_date %}
-            <li><i class="bi bi-calendar3 text-secondary"></i> {% trans "Last Donated" %}: {{ profile.last_donation_date }}</li>
-            {% endif %}
-            <li>
-              <i class="bi bi-eye {% if profile.show_in_directory %}text-success{% else %}text-secondary{% endif %}"></i>
-              {% if profile.show_in_directory %}{% trans "Visible in Directory" %}{% else %}{% trans "Hidden from Directory" %}{% endif %}
-            </li>
-          </ul>
-          <a href="{% url 'core:edit_profile' %}" class="btn btn-outline-danger w-100 mt-2">
-            <i class="bi bi-pencil-fill me-1"></i>{% trans "Edit Profile" %}
-          </a>
+    <div class="col-lg-6">
+      <div class="sj-card sj-card-body">
+        <h5 class="mb-2">{% t "Details" %}</h5>
+        <div class="info-row"><span class="k">{% t "Donor Name" %}</span><strong>{{ donor.user.get_full_name }}</strong></div>
+        <div class="info-row"><span class="k">{% t "Mobile Number" %}</span><span>{{ donor.mobile }}</span></div>
+        <div class="info-row"><span class="k">{% t "Age" %}</span><span>{% if donor.age is not None %}{{ donor.age }}{% else %}–{% endif %}</span></div>
+        <div class="info-row"><span class="k">{% t "Blood Group" %}</span><strong class="text-danger">{{ donor.blood_group }}</strong></div>
+        <div class="info-row"><span class="k">{% t "District" %}</span><span>{{ donor.district|dist_label }}</span></div>
+        <div class="info-row"><span class="k">{% t "Locality" %}</span><span>{{ donor.locality }}</span></div>
+        <div class="info-row"><span class="k">{% t "Last Donation" %}</span><span>{% if donor.last_donation_date %}{{ donor.last_donation_date|date:"d M Y" }}{% else %}–{% endif %}</span></div>
+        <div class="info-row"><span class="k">{% t "Next Eligible Date" %}</span><span>{% if donor.next_eligible_date %}{{ donor.next_eligible_date|date:"d M Y" }}{% else %}–{% endif %}</span></div>
+        {% if next_reminder %}<div class="info-row"><span class="k">{% t "Reminder scheduled for" %}</span><span>{{ next_reminder.remind_on|date:"d M Y" }}</span></div>{% endif %}
+        <div class="d-flex flex-wrap gap-2 mt-3">
+          <a class="btn btn-outline-sj btn-sm" href="{% url 'core:edit_profile' %}"><i class="bi bi-pencil"></i> {% t "Edit Profile" %}</a>
+          <a class="btn btn-outline-secondary btn-sm" href="{% url 'core:notification_settings' %}"><i class="bi bi-bell"></i> {% t "Notification Settings" %}</a>
         </div>
       </div>
     </div>
-
-    <!-- Right: Requests & Notifications -->
-    <div class="col-lg-8">
-      <!-- Pending contact requests -->
-      {% if pending_requests %}
-      <div class="sj-dash-card mb-4">
-        <div class="sj-dash-card-header sj-header-urgent">
-          <i class="bi bi-bell-fill me-2"></i>
-          {% trans "Pending Confirmation Requests" %}
-          <span class="badge bg-white text-danger ms-2">{{ pending_requests.count }}</span>
+    <div class="col-lg-6">
+      <div class="sj-card sj-card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="mb-0">{% t "Donation History" %}</h5>
+          <a href="{% url 'core:donation_history' %}" class="small">{% t "View Donation History" %} →</a>
         </div>
-        <div class="p-3">
-          {% for req in pending_requests %}
-          <div class="sj-request-item">
-            <div class="d-flex justify-content-between align-items-start">
-              <div>
-                <p class="mb-1 fw-semibold">{% trans "Someone is requesting blood" %}</p>
-                <p class="text-muted small mb-1">
-                  <i class="bi bi-clock me-1"></i>{{ req.receiver_confirmed_at|timesince }} {% trans "ago" %}
-                </p>
-              </div>
-              <div class="d-flex gap-2">
-                <a href="{% url 'core:donor_respond' req.id 'confirm' %}"
-                   class="btn btn-success btn-sm"
-                   onclick="return confirm('{% trans "Confirm you are willing to donate?" %}')">
-                  <i class="bi bi-check-circle-fill me-1"></i>{% trans "Confirm – Willing to Donate" %}
-                </a>
-                <a href="{% url 'core:donor_respond' req.id 'decline' %}"
-                   class="btn btn-outline-secondary btn-sm"
-                   onclick="return confirm('{% trans "Decline this request?" %}')">
-                  <i class="bi bi-x-circle me-1"></i>{% trans "Decline" %}
-                </a>
-              </div>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
-
-      <!-- Recent contact history -->
-      <div class="sj-dash-card mb-4">
-        <div class="sj-dash-card-header">
-          <i class="bi bi-clock-history me-2"></i>{% trans "Contact History" %}
-        </div>
-        <div class="p-3">
-          {% if recent_contacts %}
-          <div class="table-responsive">
-            <table class="table table-sm sj-table">
-              <thead>
-                <tr>
-                  <th>{% trans "Date" %}</th>
-                  <th>{% trans "Status" %}</th>
-                  <th>{% trans "Actions" %}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for req in recent_contacts %}
-                <tr>
-                  <td class="text-muted small">{{ req.created_at|date:"d M Y" }}</td>
-                  <td>
-                    <span class="badge 
-                      {% if req.status == 'donor_confirmed' %}bg-success
-                      {% elif req.status == 'donor_declined' %}bg-secondary
-                      {% elif req.status == 'receiver_confirmed' %}bg-warning text-dark
-                      {% else %}bg-info text-dark{% endif %}">
-                      {{ req.get_status_display }}
-                    </span>
-                  </td>
-                  <td>
-                    {% if req.receiver_confirmed_call and not req.donor_responded %}
-                    <div class="d-flex gap-1">
-                      <a href="{% url 'core:donor_respond' req.id 'confirm' %}" class="btn btn-success btn-xs">
-                        <i class="bi bi-check-circle me-1"></i>{% trans "Confirm" %}
-                      </a>
-                      <a href="{% url 'core:donor_respond' req.id 'decline' %}" class="btn btn-outline-secondary btn-xs">{% trans "Decline" %}</a>
-                    </div>
-                    {% else %}–{% endif %}
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-          {% else %}
-          <p class="text-muted text-center py-3">{% trans "No contact requests yet." %}</p>
-          {% endif %}
-        </div>
-      </div>
-
-      <!-- Notifications -->
-      <div class="sj-dash-card">
-        <div class="sj-dash-card-header d-flex justify-content-between align-items-center">
-          <span><i class="bi bi-bell me-2"></i>{% trans "Recent Notifications" %}</span>
-          {% if unread_notifs > 0 %}
-          <form method="post" action="{% url 'core:mark_all_read' %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-sm btn-outline-light">{% trans "Mark All Read" %}</button>
-          </form>
-          {% endif %}
-        </div>
-        <div class="p-3">
-          {% if notifications %}
-          {% for notif in notifications %}
-          <div class="sj-notif-item {% if not notif.is_read %}sj-notif-unread{% endif %}">
-            <p class="mb-1 fw-semibold">{{ notif.title }}</p>
-            <p class="text-muted small mb-1">{{ notif.message }}</p>
-            <p class="text-muted tiny">{{ notif.created_at|timesince }} {% trans "ago" %}</p>
-          </div>
-          {% endfor %}
-          <div class="text-center mt-2">
-            <a href="{% url 'core:notifications' %}" class="btn btn-sm btn-outline-danger">{% trans "View All Notifications" %}</a>
-          </div>
-          {% else %}
-          <p class="text-muted text-center py-3">{% trans "No notifications yet." %}</p>
-          {% endif %}
-        </div>
+        {% for r in history %}
+          <div class="info-row"><span>{{ r.donation_date|date:"d M Y" }}</span><span class="text-muted">{{ r.get_donation_type_display|tr }}</span></div>
+        {% empty %}
+          <p class="text-muted mb-0">{% t "No donations recorded yet." %}</p>
+        {% endfor %}
       </div>
     </div>
   </div>

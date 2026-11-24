@@ -1,42 +1,11 @@
 {% extends "base.html" %}
-{% load i18n %}
-{% block title %}{% trans "Terms and Conditions" %} – Sanjeevani{% endblock %}
+{% load sj %}
+{% block title %}{% t "Terms of Use" %} – SANJEEVANI{% endblock %}
 {% block content %}
-<div class="sj-page-header py-4 text-center">
-  <div class="container">
-    <h1 class="sj-page-title">{% trans "Terms and Conditions" %}</h1>
-  </div>
-</div>
-<div class="container py-5">
-  <div class="row justify-content-center">
-    <div class="col-lg-8">
-      <div class="sj-form-card">
-        <h5>{% trans "1. Acceptance of Terms" %}</h5>
-        <p>{% trans "By using Sanjeevani, you agree to these terms. If you do not agree, please do not use this platform." %}</p>
-
-        <h5 class="mt-4">{% trans "2. Donor Responsibility" %}</h5>
-        <p>{% trans "Donors are responsible for providing accurate information. You must only register if you are genuinely willing and medically eligible to donate blood. Providing false information may put someone's life at risk." %}</p>
-
-        <h5 class="mt-4">{% trans "3. Medical Disclaimer" %}</h5>
-        <p>{% trans "Sanjeevani is a connection platform only. We do not verify medical eligibility. All blood donation must follow the guidelines of licensed medical professionals and hospitals." %}</p>
-
-        <h5 class="mt-4">{% trans "4. Privacy & Contact Consent" %}</h5>
-        <p>{% trans "By enabling contact sharing, you consent to receivers being able to call and WhatsApp you. You can withdraw this consent at any time from your profile settings." %}</p>
-
-        <h5 class="mt-4">{% trans "5. Prohibited Use" %}</h5>
-        <ul>
-          <li>{% trans "Do not create fake donor profiles." %}</li>
-          <li>{% trans "Do not use this platform for commercial purposes." %}</li>
-          <li>{% trans "Do not harass donors or receivers." %}</li>
-          <li>{% trans "Do not attempt to access other users' private data." %}</li>
-        </ul>
-
-        <h5 class="mt-4">{% trans "6. Service Availability" %}</h5>
-        <p>{% trans "We strive to keep Sanjeevani available 24/7, but we do not guarantee uninterrupted access. We are not liable for any harm caused by service unavailability." %}</p>
-
-        <p class="text-muted small mt-4">{% trans "Last updated: November 2024" %}</p>
-      </div>
-    </div>
-  </div>
+<div class="page-head"><div class="container"><h2 class="mb-0">{% t "Terms of Use" %}</h2></div></div>
+<div class="container" style="max-width:760px">
+  <p>{% t "SANJEEVANI only connects people. Blood donation is voluntary and must never be paid for." %}</p>
+  <p>{% t "Donors must be at least 18 years old and must follow the eligibility advice of a qualified medical professional or blood bank." %}</p>
+  <p>{% t "Misuse of donor contact details is prohibited and may lead to account removal." %}</p>
 </div>
 {% endblock %}

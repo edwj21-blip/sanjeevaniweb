@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% load sj %}
+{% block title %}{% t "Admin Dashboard" %} – SANJEEVANI{% endblock %}
+{% block content %}
+<div class="container py-4">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <h3 class="mb-0">{% t "Admin Dashboard" %}</h3>
+    <div class="d-flex gap-2 flex-wrap">
+      <a class="btn btn-outline-sj btn-sm" href="/admin/core/eligibilitysettings/">{% t "Eligibility Settings" %}</a>
+      <a class="btn btn-outline-sj btn-sm" href="/admin/core/donationrecord/">{% t "Donation Records" %}</a>
+      <a class="btn btn-outline-sj btn-sm" href="/admin/core/donorprofile/">{% t "Donor Records" %}</a>
+      <a class="btn btn-outline-sj btn-sm" href="/admin/core/reminder/">{% t "Notification Records" %}</a>
+    </div>
+  </div>
+
+  {% if not cfg.is_validated %}
+  <div class="alert alert-warning">{% t "The donation interval has not been confirmed by a medical authority yet. Set who validated it in Eligibility Settings." %}
+    ({{ cfg.whole_blood_interval_days }} {% t "days" %})</div>
+  {% endif %}
+  {% if missing_dob %}<div class="alert alert-info">{{ missing_dob }} {% t "donor(s) have no date of birth on file and are hidden from public search until they add it." %}</div>{% endif %}
+
+  <div class="row g-3 mb-4 text-center">
+    <div class="col-4"><div class="sj-card stat"><div class="num">{{ total }}</div><div class="lbl">{% t "Total Registered Donors" %}</div></div></div>
+    <div class="col-4"><div class="sj-card stat"><div class="num text-success">{{ available }}</div><div class="lbl">{% t "Available Donors" %}</div></div></div>
+    <div class="col-4"><div class="sj-card stat"><div class="num text-danger">{{ unavailable }}</div><div class="lbl">{% t "Unavailable Donors" %}</div></div></div>
+  </div>
+
+  <form class="input-group mb-4" method="get">
+    <input class="form-control" name="q" value="{{ q }}" placeholder="{% t 'Search donors by name, mobile or locality' %}">
+    <button class="btn btn-sj">{% t "Search" %}</button>
+  </form>
+  {% if q %}
+  <div class="sj-card table-responsive mb-4"><table class="table mb-0">
+    <thead class="table-light"><tr><th>{% t "Donor Name" %}</th><th>{% t "Mobile Number" %}</th><th>{% t "Blood Group" %}</th><th>{% t "Status" %}</th><th></th></tr></thead>
+    {% for d in found %}<tr><td>{{ d.user.get_full_name }}</td><td>{{ d.mobile }}</td><td>{{ d.blood_group }}</td>
+      <td>{% if d.is_available %}<span class="badge-avail">{% t "Available" %}</span>{% else %}<span class="badge-unavail">{% t "Unavailable" %}</span>{% endif %}</td>
+      <td><a href="/admin/core/donorprofile/{{ d.id }}/change/">{% t "Edit" %}</a></td></tr>
+    {% empty %}<tr><td colspan="5" class="text-muted text-center">{% t "No donors match your search." %}</td></tr>{% endfor %}
+  </table></div>
+  {% endif %}
+
+  <div class="row g-4 mb-4">
+    <div class="col-md-6"><div class="sj-card table-responsive"><table class="table mb-0">
+      <thead class="table-light"><tr><th>{% t "Blood Group" %}</th><th>{% t "Total" %}</th><th>{% t "Available" %}</th></tr></thead>
+      {% for b in blood_stats %}<tr><td>{{ b.blood_group }}</td><td>{{ b.total }}</td><td>{{ b.available }}</td></tr>{% endfor %}
+    </table></div></div>
+    <div class="col-md-6"><div class="sj-card table-responsive"><table class="table mb-0">
+      <thead class="table-light"><tr><th>{% t "District" %}</th><th>{% t "Total" %}</th><th>{% t "Available" %}</th></tr></thead>
+      {% for d in district_stats %}<tr><td>{{ d.district|dist_label }}</td><td>{{ d.total }}</td><td>{{ d.available }}</td></tr>{% endfor %}
+    </table></div></div>
+  </div>
+
+  {% if dup_groups %}
+  <h5>{% t "Possible duplicate donors" %}</h5>
+  <div class="sj-card table-responsive mb-4"><table class="table mb-0">
+    <thead class="table-light"><tr><th>{% t "Donor Name" %}</th><th>{% t "Date of Birth" %}</th><th>#</th></tr></thead>
+    {% for g in dup_groups %}<tr><td>{{ g.user__first_name }} {{ g.user__last_name }}</td><td>{{ g.date_of_birth|date:"d M Y" }}</td><td>{{ g.n }}</td></tr>{% endfor %}
+  </table></div>
+  {% endif %}
+
+  <div class="row g-4">
+    <div class="col-lg-4"><h6>{% t "Recent confirmation records" %}</h6><div class="sj-card sj-card-body small">
+      {% for r in requests %}<div class="info-row"><span>{{ r.donor_profile.get_display_name }}</span><span class="text-muted">{{ r.get_status_display|tr }}</span></div>{% empty %}–{% endfor %}</div></div>
+    <div class="col-lg-4"><h6>{% t "Recent donations" %}</h6><div class="sj-card sj-card-body small">
+      {% for r in recent_donations %}<div class="info-row"><span>{{ r.donor.get_display_name }}</span><span class="text-muted">{{ r.donation_date|date:"d M Y" }}</span></div>{% empty %}–{% endfor %}</div></div>
+    <div class="col-lg-4"><h6>{% t "Reminders" %}</h6><div class="sj-card sj-card-body small">
+      {% for r in reminders %}<div class="info-row"><span>{{ r.donor.get_display_name }} · {{ r.remind_on|date:"d M" }}</span><span class="text-muted">{{ r.get_status_display|tr }}</span></div>{% empty %}–{% endfor %}</div></div>
+  </div>
+</div>
+{% endblock %}

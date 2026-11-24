@@ -1,126 +1,41 @@
 {% extends "base.html" %}
-{% load i18n %}
-
-{% block title %}{% trans "Find Blood Donors" %} – Sanjeevani{% endblock %}
-
+{% load sj %}
+{% block title %}{% t "Find Blood" %} – SANJEEVANI{% endblock %}
 {% block content %}
-<div class="container-fluid px-0">
-  <!-- Page header -->
-  <div class="sj-page-header py-4">
-    <div class="container">
-      <div class="row align-items-center">
-        <div class="col">
-          <h1 class="sj-page-title"><i class="bi bi-search text-danger me-2"></i>{% trans "Find Blood Donors" %}</h1>
-          <p class="sj-page-subtitle">{% trans "Search from our registered voluntary donors across Kerala" %}</p>
-        </div>
-        <div class="col-auto">
-          <a href="{% url 'core:register' %}" class="btn sj-btn-primary">
-            <i class="bi bi-person-plus-fill me-1"></i>{% trans "Become a Donor" %}
-          </a>
-        </div>
+<div class="page-head"><div class="container">
+  <h2 class="mb-1">{% t "Find Blood Donors" %}</h2>
+  <p class="sj-lead mb-0">{% t "All matching donors are shown. Donors who recently donated are marked Unavailable." %}</p>
+</div></div>
+<div class="container">
+  <form method="get" class="sj-card sj-card-body mb-4">
+    <div class="row g-2">
+      <div class="col-6 col-md-2"><label class="form-label">{% t "Blood Group" %}</label>{{ form.blood_group }}</div>
+      <div class="col-6 col-md-2"><label class="form-label">{% t "District" %}</label>{{ form.district }}</div>
+      <div class="col-6 col-md-2"><label class="form-label">{% t "Locality" %}</label>{{ form.locality }}</div>
+      <div class="col-6 col-md-2"><label class="form-label">{% t "Donor Name" %}</label>{{ form.name }}</div>
+      <div class="col-6 col-md-2"><label class="form-label">{% t "Availability" %}</label>{{ form.availability }}</div>
+      <div class="col-6 col-md-2 d-flex align-items-end gap-2">
+        <button class="btn btn-sj flex-fill"><i class="bi bi-search"></i> {% t "Search" %}</button>
+        <a href="{% url 'core:donor_directory' %}" class="btn btn-outline-secondary" aria-label="Reset"><i class="bi bi-x-lg"></i></a>
       </div>
     </div>
+  </form>
+
+  <p class="text-muted">{{ total }} {% t "donors found" %}</p>
+  <div class="row g-3">
+    {% for donor in page %}
+    <div class="col-12 col-sm-6 col-lg-4">{% include "donors/_donor_card.html" with donor=donor %}</div>
+    {% empty %}
+    <div class="col-12"><div class="sj-card sj-card-body text-center text-muted py-5">{% t "No donors match your search." %}</div></div>
+    {% endfor %}
   </div>
 
-  <div class="container py-4">
-    <!-- Search Form -->
-    <div class="sj-search-panel mb-4">
-      <form method="get" action="{% url 'core:donor_directory' %}">
-        <div class="row g-3 align-items-end">
-          <div class="col-md-3 col-sm-6">
-            <label class="form-label fw-semibold">{% trans "Blood Group" %}</label>
-            {{ form.blood_group }}
-          </div>
-          <div class="col-md-3 col-sm-6">
-            <label class="form-label fw-semibold">{% trans "District" %}</label>
-            {{ form.district }}
-          </div>
-          <div class="col-md-3 col-sm-6">
-            <label class="form-label fw-semibold">{% trans "Locality" %}</label>
-            {{ form.locality }}
-          </div>
-          <div class="col-md-1 col-sm-6">
-            <div class="form-check mt-4">
-              {{ form.available_only }}
-              <label class="form-check-label small">{% trans "Available only" %}</label>
-            </div>
-          </div>
-          <div class="col-md-2 col-sm-12">
-            <button type="submit" class="btn sj-btn-primary w-100">
-              <i class="bi bi-search me-1"></i>{% trans "Search" %}
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
-
-    <!-- Results header -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <p class="text-muted mb-0">
-        <strong>{{ total_results }}</strong> {% trans "donors found" %}
-      </p>
-      {% if request.GET %}
-      <a href="{% url 'core:donor_directory' %}" class="btn btn-sm btn-outline-secondary">
-        <i class="bi bi-x-circle me-1"></i>{% trans "Clear Filters" %}
-      </a>
-      {% endif %}
-    </div>
-
-    <!-- Blood group quick filters -->
-    <div class="d-flex flex-wrap gap-2 mb-4">
-      {% for bg, label in blood_groups %}
-      <a href="?blood_group={{ bg }}&available_only=on" 
-         class="btn btn-sm {% if request.GET.blood_group == bg %}btn-danger{% else %}btn-outline-danger{% endif %} sj-bg-filter-btn">
-        {{ label }}
-      </a>
-      {% endfor %}
-    </div>
-
-    <!-- Donor Grid -->
-    {% if page_obj %}
-    <div class="row g-4">
-      {% for donor in page_obj %}
-      <div class="col-md-6 col-lg-4 col-xl-3">
-        {% include "donors/_donor_card.html" with donor=donor %}
-      </div>
-      {% endfor %}
-    </div>
-
-    <!-- Pagination -->
-    {% if page_obj.has_other_pages %}
-    <nav class="mt-5 d-flex justify-content-center" aria-label="Pagination">
-      <ul class="pagination">
-        {% if page_obj.has_previous %}
-        <li class="page-item">
-          <a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.previous_page_number }}">
-            <i class="bi bi-chevron-left"></i>
-          </a>
-        </li>
-        {% endif %}
-        {% for num in page_obj.paginator.page_range %}
-        <li class="page-item {% if num == page_obj.number %}active{% endif %}">
-          <a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ num }}">{{ num }}</a>
-        </li>
-        {% endfor %}
-        {% if page_obj.has_next %}
-        <li class="page-item">
-          <a class="page-link" href="?{% if request.GET.urlencode %}{{ request.GET.urlencode }}&{% endif %}page={{ page_obj.next_page_number }}">
-            <i class="bi bi-chevron-right"></i>
-          </a>
-        </li>
-        {% endif %}
-      </ul>
-    </nav>
-    {% endif %}
-
-    {% else %}
-    <div class="sj-empty-state text-center py-5">
-      <div class="sj-empty-icon"><i class="bi bi-search text-muted"></i></div>
-      <h4 class="mt-3">{% trans "No donors found" %}</h4>
-      <p class="text-muted">{% trans "Try changing your search filters or check back later." %}</p>
-      <a href="{% url 'core:donor_directory' %}" class="btn btn-outline-danger">{% trans "Show All Donors" %}</a>
-    </div>
-    {% endif %}
-  </div>
+  {% if page.has_other_pages %}
+  <nav class="mt-4"><ul class="pagination justify-content-center">
+    {% if page.has_previous %}<li class="page-item"><a class="page-link" href="?{{ querystring }}&page={{ page.previous_page_number }}">«</a></li>{% endif %}
+    <li class="page-item disabled"><span class="page-link">{{ page.number }} / {{ page.paginator.num_pages }}</span></li>
+    {% if page.has_next %}<li class="page-item"><a class="page-link" href="?{{ querystring }}&page={{ page.next_page_number }}">»</a></li>{% endif %}
+  </ul></nav>
+  {% endif %}
 </div>
 {% endblock %}

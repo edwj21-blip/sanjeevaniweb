@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load sj %}
+{% block title %}{% t "Update Donation Details" %} – SANJEEVANI{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:520px">
+  <div class="sj-card sj-card-body p-4">
+    <h3>{% t "Update Donation Details" %}</h3>
+    <p class="sj-lead">{% t "Record a blood donation you have completed. Your status becomes Unavailable immediately and returns to Available automatically on your next eligible date." %}</p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+      {% t "Blood Donation Date" as l %}{% include "_field.html" with field=form.donation_date label=l %}
+      {% t "Donation type" as l %}{% include "_field.html" with field=form.donation_type label=l %}
+      <button class="btn btn-sj btn-lg w-100">{% t "Save Donation Date" %}</button>
+      <a href="{% url 'core:donor_dashboard' %}" class="btn btn-link w-100 mt-1">{% t "Cancel" %}</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

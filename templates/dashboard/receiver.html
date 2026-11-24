@@ -1,154 +1,33 @@
 {% extends "base.html" %}
-{% load i18n %}
-
-{% block title %}{% trans "My Blood Requests" %} – Sanjeevani{% endblock %}
-
+{% load sj %}
+{% block title %}{% t "My Requests" %} – SANJEEVANI{% endblock %}
 {% block content %}
 <div class="container py-4">
-  <div class="sj-dash-header mb-4">
-    <h2 class="sj-dash-title">
-      <i class="bi bi-clipboard-check text-primary me-2"></i>{% trans "My Blood Requests" %}
-    </h2>
-    <p class="text-muted">{% trans "Track all your donor contact interactions" %}</p>
-  </div>
-
-  <div class="row g-4">
-    <div class="col-lg-8">
-      {% if my_requests %}
-      {% for req in my_requests %}
-      <div class="sj-dash-card mb-4">
-        <div class="sj-dash-card-header d-flex justify-content-between">
-          <span>
-            <i class="bi bi-person-fill me-2"></i>
-            {{ req.donor_profile.get_display_name }} – {{ req.donor_profile.blood_group }}
-          </span>
-          <span class="badge 
-            {% if req.status == 'donor_confirmed' %}bg-success
-            {% elif req.status == 'donor_declined' %}bg-secondary
-            {% elif req.status == 'location_sent' %}bg-primary
-            {% elif req.status == 'whatsapp_sent' %}bg-info text-dark
-            {% else %}bg-warning text-dark{% endif %}">
-            {{ req.get_status_display }}
-          </span>
-        </div>
-        <div class="p-4">
-          <div class="row g-3 mb-3">
-            <div class="col-sm-6">
-              <small class="text-muted">{% trans "Donor Location" %}</small>
-              <p class="mb-0">{{ req.donor_profile.locality }}, {{ req.donor_profile.get_district_display }}</p>
-            </div>
-            <div class="col-sm-6">
-              <small class="text-muted">{% trans "Contact Initiated" %}</small>
-              <p class="mb-0">{{ req.created_at|date:"d M Y, g:i A" }}</p>
-            </div>
-          </div>
-
-          <!-- Progress tracker -->
-          <div class="sj-progress-tracker mb-3">
-            <div class="sj-pt-step {% if req.receiver_confirmed_call or req.status != 'initiated' %}sj-pt-done{% endif %}">
-              <div class="sj-pt-dot"></div>
-              <div class="sj-pt-label">{% trans "Call Confirmed" %}</div>
-            </div>
-            <div class="sj-pt-line"></div>
-            <div class="sj-pt-step {% if req.donor_responded %}sj-pt-done{% elif req.receiver_confirmed_call %}sj-pt-active{% endif %}">
-              <div class="sj-pt-dot"></div>
-              <div class="sj-pt-label">{% trans "Donor Responded" %}</div>
-            </div>
-            <div class="sj-pt-line"></div>
-            <div class="sj-pt-step {% if req.whatsapp_opened %}sj-pt-done{% elif req.status == 'donor_confirmed' %}sj-pt-active{% endif %}">
-              <div class="sj-pt-dot"></div>
-              <div class="sj-pt-label">{% trans "WhatsApp Sent" %}</div>
-            </div>
-            <div class="sj-pt-line"></div>
-            <div class="sj-pt-step {% if req.location_whatsapp_opened %}sj-pt-done{% elif req.whatsapp_opened %}sj-pt-active{% endif %}">
-              <div class="sj-pt-dot"></div>
-              <div class="sj-pt-label">{% trans "Location Shared" %}</div>
-            </div>
-          </div>
-
-          <!-- Action buttons -->
-          <div class="d-flex flex-wrap gap-2">
-            <a href="{% url 'core:initiate_contact' req.donor_profile.id %}" class="btn btn-outline-primary btn-sm">
-              <i class="bi bi-arrow-right me-1"></i>{% trans "Continue" %}
-            </a>
-            {% if req.status == 'donor_confirmed' and not req.whatsapp_opened %}
-            <a href="{% url 'core:whatsapp_confirmation' req.id %}" class="btn sj-btn-whatsapp btn-sm">
-              <i class="bi bi-whatsapp me-1"></i>{% trans "Send WhatsApp" %}
-            </a>
-            {% endif %}
-            {% if req.whatsapp_opened and not req.location_whatsapp_opened %}
-            <a href="{% url 'core:hospital_location' req.id %}" class="btn btn-outline-success btn-sm">
-              <i class="bi bi-geo-alt-fill me-1"></i>{% trans "Share Location" %}
-            </a>
-            {% endif %}
-          </div>
-        </div>
-      </div>
+  <h3 class="mb-3">{% t "My Requests" %}</h3>
+  <div class="sj-card table-responsive">
+    <table class="table mb-0 align-middle">
+      <thead class="table-light"><tr><th>{% t "Donor" %}</th><th>{% t "Blood Group" %}</th><th>{% t "Status" %}</th><th>{% t "Date" %}</th><th></th></tr></thead>
+      <tbody>
+      {% for r in requests %}
+        <tr>
+          <td>{{ r.donor_profile.get_display_name }}</td>
+          <td>{{ r.donor_profile.blood_group }}</td>
+          <td>
+            {% if r.status == 'donor_confirmed' or r.status == 'hospital_selected' or r.status == 'location_sent' %}<span class="badge-avail">{{ r.get_status_display|tr }}</span>
+            {% elif r.status == 'donor_declined' %}<span class="badge-unavail">{{ r.get_status_display|tr }}</span>
+            {% else %}<span class="badge bg-light text-dark border">{{ r.get_status_display|tr }}</span>{% endif %}
+          </td>
+          <td class="text-muted small">{{ r.created_at|date:"d M Y H:i" }}</td>
+          <td class="text-end">
+            {% if r.status == 'donor_confirmed' %}<a class="btn btn-sj btn-sm" href="{% url 'core:hospital_select' r.id %}">{% t "Select Hospital & Share Location" %}</a>
+            {% elif r.status == 'hospital_selected' or r.status == 'location_sent' %}<a class="btn btn-outline-sj btn-sm" href="{% url 'core:hospital_share' r.id %}">{% t "Hospital Location" %}</a>{% endif %}
+          </td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="5" class="text-center text-muted py-4">{% t "You have not contacted any donors yet." %}</td></tr>
       {% endfor %}
-      {% else %}
-      <div class="sj-empty-state text-center py-5">
-        <div class="sj-empty-icon"><i class="bi bi-clipboard text-muted"></i></div>
-        <h4 class="mt-3">{% trans "No requests yet" %}</h4>
-        <p class="text-muted">{% trans "Search for a donor and initiate contact to track it here." %}</p>
-        <a href="{% url 'core:donor_directory' %}" class="btn sj-btn-primary">
-          <i class="bi bi-search me-1"></i>{% trans "Find Donors" %}
-        </a>
-      </div>
-      {% endif %}
-    </div>
-
-    <div class="col-lg-4">
-      <!-- Notifications -->
-      <div class="sj-dash-card">
-        <div class="sj-dash-card-header d-flex justify-content-between align-items-center">
-          <span><i class="bi bi-bell me-2"></i>{% trans "Notifications" %}</span>
-          {% if unread_notifs > 0 %}
-          <span class="badge bg-danger rounded-pill">{{ unread_notifs }}</span>
-          {% endif %}
-        </div>
-        <div class="p-3">
-          {% if notifications %}
-          {% for notif in notifications %}
-          <div class="sj-notif-item {% if not notif.is_read %}sj-notif-unread{% endif %}">
-            <p class="mb-1 fw-semibold small">{{ notif.title }}</p>
-            <p class="text-muted tiny mb-0">{{ notif.created_at|timesince }} {% trans "ago" %}</p>
-          </div>
-          {% endfor %}
-          {% else %}
-          <p class="text-muted text-center py-3 small">{% trans "No notifications." %}</p>
-          {% endif %}
-        </div>
-      </div>
-    </div>
+      </tbody>
+    </table>
   </div>
 </div>
-
-<!-- Notification polling for active requests -->
-{% if user.is_authenticated %}
-<script>
-// Poll for new notifications every 10 seconds
-setInterval(function() {
-  {% for req in my_requests %}
-  {% if req.receiver_confirmed_call and not req.donor_responded %}
-  fetch("{% url 'core:check_status' req.id %}")
-    .then(r => r.json())
-    .then(data => {
-      if (data.status === 'donor_confirmed' || data.status === 'donor_declined') {
-        const popup = document.getElementById('notif-popup');
-        if (popup && popup.innerHTML === '') {
-          if (data.status === 'donor_confirmed') {
-            popup.innerHTML = `<div class="sj-popup sj-popup-success"><i class="bi bi-check-circle-fill me-2"></i><strong>{% trans "Donor Confirmed!" %}</strong> {% trans "The donor is willing to donate blood." %}</div>`;
-          } else {
-            popup.innerHTML = `<div class="sj-popup sj-popup-warning"><i class="bi bi-x-circle-fill me-2"></i><strong>{% trans "Donor Unavailable." %}</strong> {% trans "Please search for another donor." %}</div>`;
-          }
-          popup.classList.remove('d-none');
-          setTimeout(() => location.reload(), 3000);
-        }
-      }
-    });
-  {% endif %}
-  {% endfor %}
-}, 10000);
-</script>
-{% endif %}
 {% endblock %}

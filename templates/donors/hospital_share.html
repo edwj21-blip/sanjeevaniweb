@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% load sj %}
+{% block title %}{% t "Hospital Location" %} – SANJEEVANI{% endblock %}
+{% block content %}
+<div class="page-head"><div class="container"><h2 class="mb-0">{% t "Hospital Location Confirmed" %}</h2></div></div>
+<div class="container" style="max-width:640px">
+  <div class="sj-card sj-card-body">
+    <div class="info-row"><span class="k">{% t "Hospital" %}</span><strong class="text-end">{{ hospital.hospital_name }}</strong></div>
+    <div class="info-row"><span class="k">{% t "Address" %}</span><span class="text-end">{{ hospital.full_address }}</span></div>
+    <div class="info-row"><span class="k">{% t "Latitude" %} / {% t "Longitude" %}</span><span>{{ hospital.latitude }}, {{ hospital.longitude }}</span></div>
+    <div class="info-row"><span class="k">{% t "Donor" %}</span><span>{{ req.donor_profile.get_display_name }}</span></div>
+    <div class="mt-3 d-grid gap-2">
+      <a class="btn btn-outline-sj" href="{{ hospital.google_maps_link }}" target="_blank" rel="noopener"><i class="bi bi-map"></i> {% t "Open in Google Maps" %}</a>
+      <a class="btn btn-success btn-lg js-wa" id="waBtn" href="{{ whatsapp_url }}" target="_blank" rel="noopener"
+         data-sent-url="{% url 'core:mark_location_sent' req.id %}"><i class="bi bi-whatsapp"></i> {% t "Share Hospital Location via WhatsApp" %}</a>
+      <a class="btn btn-link text-muted" href="{% url 'core:hospital_select' req.id %}">{% t "Change Location" %}</a>
+    </div>
+    <p class="small text-muted mt-3 mb-0">{% t "WhatsApp opens with a ready message. Press Send yourself – nothing is sent automatically." %}</p>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.getElementById('waBtn').addEventListener('click', function () {
+  window.SJ_post(this.dataset.sentUrl, {}).catch(function () {});
+});
+</script>
+{% endblock %}

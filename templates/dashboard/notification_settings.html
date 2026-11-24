@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load sj %}
+{% block title %}{% t "Notification Settings" %} – SANJEEVANI{% endblock %}
+{% block content %}
+<div class="container py-4" style="max-width:640px">
+  <div class="sj-card sj-card-body p-4 mb-3">
+    <h3>{% t "Notification Settings" %}</h3>
+    <form method="post">
+      {% csrf_token %}
+      {% t "Remind me seven days before my next eligible donation date" as l %}{% include "_check.html" with field=form.notify_reminders label=l %}
+      {% if next_reminder %}<p class="small text-muted">{% t "Reminder scheduled for" %}: {{ next_reminder.remind_on|date:"d M Y" }}</p>{% endif %}
+      <button class="btn btn-sj mt-2">{% t "Save" %}</button>
+    </form>
+  </div>
+  <div class="sj-card sj-card-body p-4">
+    <h5>{% t "Browser notifications (optional)" %}</h5>
+    <p class="small text-muted">{% t "Get the reminder even when SANJEEVANI is closed. This depends on your browser, device and network, so delivery cannot be guaranteed." %}</p>
+    {% if push_ready %}
+      <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-outline-sj" id="pushEnable" data-key="{{ vapid_public_key }}">{% t "Enable browser notifications" %}</button>
+        <button class="btn btn-outline-secondary" id="pushDisable">{% t "Turn off" %}</button>
+      </div>
+      <p class="small mt-2 mb-0" id="pushMsg">{% if subscriptions %}{% t "Browser notifications are enabled." %}{% endif %}</p>
+    {% else %}
+      <div class="alert alert-secondary mb-0">{% t "Browser notifications are not configured on this server yet." %}</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

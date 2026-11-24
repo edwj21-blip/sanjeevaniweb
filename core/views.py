@@ -1,600 +1,564 @@
 """Views for Sanjeevani Blood Donor Platform."""
 import json
-import urllib.parse
-from datetime import date
+from datetime import timedelta
+from decimal import Decimal, InvalidOperation
 
-from django.shortcuts import render, redirect, get_object_or_404
+from django.conf import settings
+from django.contrib import messages
+from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.contrib import messages
-from django.db import transaction
-from django.db.models import Count, Q
-from django.http import JsonResponse, HttpResponse
-from django.views.decorators.http import require_POST, require_GET
 from django.core.paginator import Paginator
-from django.utils import timezone
-from django.utils.translation import gettext as _
+from django.db import IntegrityError, transaction
+from django.db.models import Case, Count, IntegerField, Q, Value, When
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
+from django.utils import timezone, translation
+from django.views.decorators.http import require_GET, require_POST
 
-from .models import (
-    DonorProfile, DonorContactRequest, HospitalLocationDetails,
-    Notification, ContactMessage, AbuseReport, ActivityLog,
-    KERALA_DISTRICTS, BLOOD_GROUPS
-)
+from . import eligibility
 from .forms import (
-    DonorRegistrationForm, DonorProfileEditForm, MobileLoginForm,
-    ContactForm, HospitalLocationForm, DonorSearchForm
+    ContactForm, DonationUpdateForm, DonorProfileEditForm, DonorRegistrationForm,
+    DonorSearchForm, MobileLoginForm, NotificationSettingsForm, ReceiverSignupForm,
 )
+from .models import (
+    BLOOD_GROUPS, KERALA_DISTRICTS, AbuseReport, ActivityLog, ContactMessage,
+    DonationRecord, DonorContactRequest, DonorProfile, EligibilitySettings,
+    HospitalLocationDetails, Notification, PushSubscription, Reminder,
+)
+from .services import (
+    build_navigation_url, build_whatsapp_url, create_notification, log_activity,
+    push_configured, record_donation, recalc_donor, refresh_due_donors, today,
+)
+from .translations import tr
+
+OPEN_STATUSES = ('initiated', 'receiver_confirmed', 'donor_confirmed', 'hospital_selected')
+CALL_PENDING_MINUTES = 30
 
 
-def log_activity(user, action, description='', request=None):
-    """Helper to log user activity."""
-    ip = None
-    if request:
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        ip = x_forwarded_for.split(',')[0] if x_forwarded_for else request.META.get('REMOTE_ADDR')
-    ActivityLog.objects.create(user=user, action=action, description=description, ip_address=ip)
+def get_donor(user):
+    try:
+        return user.donor_profile
+    except DonorProfile.DoesNotExist:
+        return None
 
 
-def create_notification(user, title, message, notif_type='general', contact_request=None):
-    """Helper to create a notification."""
-    Notification.objects.create(
-        user=user,
-        title=title,
-        message=message,
-        notification_type=notif_type,
-        contact_request=contact_request,
-    )
+def json_error(message, status=400):
+    return JsonResponse({'ok': False, 'error': message}, status=status)
 
 
 # ─────────────────────────── HOME ───────────────────────────
-
 def home(request):
-    """Homepage with statistics and donor highlights."""
-    # Statistics from DB
-    total_donors = DonorProfile.objects.filter(is_active=True, show_in_directory=True).count()
-    available_donors = DonorProfile.objects.filter(is_active=True, show_in_directory=True, is_available=True).count()
-
-    # Blood group counts
-    blood_group_counts = {}
-    for bg, label in BLOOD_GROUPS:
-        count = DonorProfile.objects.filter(
-            is_active=True, show_in_directory=True, blood_group=bg
-        ).count()
-        blood_group_counts[bg] = count
-
-    # District counts
-    district_counts = []
-    for code, name in KERALA_DISTRICTS:
-        count = DonorProfile.objects.filter(
-            is_active=True, show_in_directory=True, district=code
-        ).count()
-        if count > 0:
-            district_counts.append({'name': name, 'code': code, 'count': count})
-    district_counts.sort(key=lambda x: x['count'], reverse=True)
-
-    # Recent donors (for homepage preview)
-    recent_donors = DonorProfile.objects.filter(
-        is_active=True, show_in_directory=True
-    ).select_related('user').order_by('-created_at')[:6]
-
-    context = {
-        'total_donors': total_donors,
-        'available_donors': available_donors,
-        'blood_group_counts': blood_group_counts,
-        'district_counts': district_counts[:8],
-        'recent_donors': recent_donors,
-        'blood_groups': BLOOD_GROUPS,
+    refresh_due_donors()
+    searchable = DonorProfile.objects.searchable()
+    ctx = {
+        'blood_groups': [b for b, _ in BLOOD_GROUPS],
+        'stat_total': searchable.count(),
+        'stat_available': searchable.filter(is_available=True).count(),
+        'stat_unavailable': searchable.filter(is_available=False).count(),
+        'stat_districts': searchable.order_by().values('district').distinct().count(),
+        'recent_donors': searchable.select_related('user').order_by('-created_at')[:6],
         'districts': KERALA_DISTRICTS,
+        'district_counts': dict(searchable.order_by().values_list('district').annotate(n=Count('id'))),
     }
-    return render(request, 'home.html', context)
+    return render(request, 'home.html', ctx)
 
 
 def set_language_view(request):
-    """Set user language preference."""
     lang = request.POST.get('language', 'en')
-    next_url = request.POST.get('next', request.META.get('HTTP_REFERER', '/'))
-    request.session['django_language'] = lang
-
-    from django.utils import translation
+    if lang not in dict(settings.LANGUAGES):
+        lang = 'en'
+    next_url = request.POST.get('next') or '/'
+    if not next_url.startswith('/'):
+        next_url = '/'
     translation.activate(lang)
     response = redirect(next_url)
-    response.set_cookie('django_language', lang)
-    from django.conf import settings
-    response.set_cookie(settings.LANGUAGE_COOKIE_NAME, lang)
+    response.set_cookie(settings.LANGUAGE_COOKIE_NAME, lang, max_age=365 * 86400, samesite='Lax')
     return response
 
 
 # ─────────────────────────── AUTH ───────────────────────────
-
+@transaction.atomic
 def donor_register(request):
-    """Donor registration view."""
-    if request.user.is_authenticated:
-        try:
-            profile = request.user.donor_profile
-            return redirect('core:donor_dashboard')
-        except DonorProfile.DoesNotExist:
-            pass
+    """One-time donor registration with mandatory server-side 18+ check."""
+    if request.user.is_authenticated and get_donor(request.user):
+        return redirect('core:donor_dashboard')
 
     form = DonorRegistrationForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
-        data = form.cleaned_data
-        with transaction.atomic():
-            # Create user
-            first_name = data['full_name'].split(' ')[0]
-            last_name = ' '.join(data['full_name'].split(' ')[1:])
-            user = User.objects.create_user(
-                username=data['mobile'],
-                password=data['password'],
-                first_name=first_name,
-                last_name=last_name,
-                email=data.get('email', ''),
-            )
-            # Create donor profile
-            profile = DonorProfile.objects.create(
-                user=user,
-                mobile=data['mobile'],
-                blood_group=data['blood_group'],
-                district=data['district'],
-                locality=data['locality'],
-                last_donation_date=data.get('last_donation_date'),
-                is_available=data.get('is_available', True),
-                show_in_directory=data.get('show_in_directory', True),
-                share_contact=data.get('share_contact', True),
-                show_last_donation_date=data.get('show_last_donation_date', False),
-            )
-            # Log activity
-            log_activity(user, 'donor_registered', f"New donor: {user.get_full_name()}", request)
+        d = form.cleaned_data
+        parts = d['full_name'].strip().split(' ', 1)
+        try:
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    username=d['mobile'], password=d['password'], email=d.get('email', ''),
+                    first_name=parts[0], last_name=parts[1] if len(parts) > 1 else '',
+                )
+                donor = DonorProfile.objects.create(
+                    user=user, mobile=d['mobile'], date_of_birth=d['date_of_birth'],
+                    blood_group=d['blood_group'], district=d['district'], locality=d['locality'],
+                    share_contact=True, health_declaration=d['health_declaration'],
+                    show_in_directory=d['show_in_directory'],
+                    show_last_donation_date=d['show_last_donation_date'],
+                )
+                if d.get('last_donation_date'):
+                    record_donation(donor, d['last_donation_date'],
+                                    d.get('last_donation_type') or 'whole_blood', source='registration')
+                else:
+                    recalc_donor(donor)
+        except IntegrityError:
+            form.add_error('mobile', tr('This mobile number is already registered.'))
+        else:
+            login(request, user)
+            log_activity(user, 'register', 'Donor registered', request)
+            messages.success(request, tr('Registration successful. Welcome to Sanjeevani!'))
+            return redirect('core:donor_dashboard')
 
-        # Auto-login
+    return render(request, 'auth/register.html', {
+        'form': form, 'adult_cutoff': eligibility.adult_cutoff(today()).isoformat(),
+        'today': today().isoformat(),
+    })
+
+
+def receiver_signup(request):
+    """Light account for people who need blood but are not donors."""
+    if request.user.is_authenticated:
+        return redirect('core:home')
+    form = ReceiverSignupForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        d = form.cleaned_data
+        parts = d['full_name'].strip().split(' ', 1)
+        user = User.objects.create_user(
+            username=d['mobile'], password=d['password'],
+            first_name=parts[0], last_name=parts[1] if len(parts) > 1 else '',
+        )
         login(request, user)
-        messages.success(request, _('Registration successful! Welcome to Sanjeevani.'))
-        return redirect('core:donor_dashboard')
+        messages.success(request, tr('Account created. You can now search for donors.'))
+        return redirect('core:donor_directory')
+    return render(request, 'auth/signup.html', {'form': form})
 
-    return render(request, 'auth/register.html', {'form': form})
+
+def _safe_next(request):
+    nxt = request.GET.get('next') or request.POST.get('next') or ''
+    return nxt if nxt.startswith('/') and not nxt.startswith('//') else ''
 
 
 def donor_login(request):
-    """Login with mobile number."""
     if request.user.is_authenticated:
         return redirect('core:home')
-
     form = MobileLoginForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
-        mobile = form.cleaned_data['mobile']
-        password = form.cleaned_data['password']
-        user = authenticate(request, username=mobile, password=password)
+        user = authenticate(request, username=form.cleaned_data['mobile'], password=form.cleaned_data['password'])
         if user:
             login(request, user)
             log_activity(user, 'login', '', request)
-            next_url = request.GET.get('next', '')
-            if next_url:
-                return redirect(next_url)
-            try:
-                user.donor_profile
-                return redirect('core:donor_dashboard')
-            except DonorProfile.DoesNotExist:
-                return redirect('core:home')
-        else:
-            messages.error(request, _('Invalid mobile number or password.'))
-
-    return render(request, 'auth/login.html', {'form': form})
+            nxt = _safe_next(request)
+            if nxt:
+                return redirect(nxt)
+            return redirect('core:donor_dashboard' if get_donor(user) else 'core:donor_directory')
+        messages.error(request, tr('Invalid mobile number or password.'))
+    return render(request, 'auth/login.html', {'form': form, 'next': _safe_next(request)})
 
 
 def donor_logout(request):
-    """Logout view."""
     if request.user.is_authenticated:
         log_activity(request.user, 'logout', '', request)
     logout(request)
-    messages.info(request, _('You have been logged out.'))
+    messages.info(request, tr('You have been logged out.'))
     return redirect('core:home')
 
 
-# ─────────────────────────── DONOR DIRECTORY ───────────────────────────
-
+# ─────────────────────────── FIND BLOOD ───────────────────────────
 def donor_directory(request):
-    """Searchable donor directory."""
+    """Public search. Available AND unavailable donors are always listed."""
+    refresh_due_donors()
     form = DonorSearchForm(request.GET or None)
-    donors = DonorProfile.objects.filter(
-        is_active=True, show_in_directory=True
-    ).select_related('user').order_by('-is_available', '-created_at')
-
+    donors = DonorProfile.objects.searchable().select_related('user')
     if form.is_valid():
-        bg = form.cleaned_data.get('blood_group')
-        district = form.cleaned_data.get('district')
-        locality = form.cleaned_data.get('locality')
-        available_only = form.cleaned_data.get('available_only')
-
-        if bg:
-            donors = donors.filter(blood_group=bg)
-        if district:
-            donors = donors.filter(district=district)
-        if locality:
-            donors = donors.filter(locality__icontains=locality)
-        if available_only:
+        c = form.cleaned_data
+        if c['blood_group']:
+            donors = donors.filter(blood_group=c['blood_group'])
+        if c['district']:
+            donors = donors.filter(district=c['district'])
+        if c['locality']:
+            donors = donors.filter(locality__icontains=c['locality'])
+        if c['name']:
+            q = c['name']
+            donors = donors.filter(Q(user__first_name__icontains=q) | Q(user__last_name__icontains=q))
+        if c['availability'] == 'available':
             donors = donors.filter(is_available=True)
-
-    paginator = Paginator(donors, 12)
-    page_number = request.GET.get('page', 1)
-    page_obj = paginator.get_page(page_number)
-
-    context = {
-        'form': form,
-        'page_obj': page_obj,
-        'total_results': donors.count(),
-        'blood_groups': BLOOD_GROUPS,
-        'districts': KERALA_DISTRICTS,
-    }
-    return render(request, 'donors/directory.html', context)
+        elif c['availability'] == 'unavailable':
+            donors = donors.filter(is_available=False)
+    donors = donors.order_by('-is_available', 'user__first_name', 'id')
+    page = Paginator(donors, 12).get_page(request.GET.get('page'))
+    params = request.GET.copy()
+    params.pop('page', None)
+    return render(request, 'donors/directory.html', {
+        'form': form, 'page': page, 'total': page.paginator.count,
+        'querystring': params.urlencode(),
+    })
 
 
 def donor_detail(request, donor_id):
-    """Individual donor detail page."""
-    donor = get_object_or_404(DonorProfile, id=donor_id, is_active=True, show_in_directory=True)
-    return render(request, 'donors/detail.html', {'donor': donor})
+    return redirect('core:donor_directory')
 
 
-# ─────────────────────────── CONTACT & CONFIRMATION FLOW ───────────────────────────
-
-@login_required
-def initiate_contact(request, donor_id):
-    """Step 1: Receiver initiates contact with donor."""
-    donor = get_object_or_404(DonorProfile, id=donor_id, is_active=True)
-
-    # Check receiver is not trying to contact themselves
-    if hasattr(request.user, 'donor_profile') and request.user.donor_profile == donor:
-        messages.error(request, _('You cannot contact yourself.'))
-        return redirect('core:donor_directory')
-
-    # Create or get existing open request
-    contact_request, created = DonorContactRequest.objects.get_or_create(
-        receiver=request.user,
-        donor_profile=donor,
-        status='initiated',
-        defaults={'status': 'initiated'}
-    )
-
-    if created:
-        log_activity(request.user, 'contact_initiated', f"Contacted donor {donor.id}", request)
-        # Notify donor
-        create_notification(
-            donor.user,
-            'New Contact Request',
-            f'Someone is trying to reach you for blood donation. Please check your dashboard.',
-            'call_initiated',
-            contact_request,
-        )
-
-    return render(request, 'donors/contact.html', {
-        'donor': donor,
-        'contact_request': contact_request,
-    })
-
-
+# ─────────────── CALL → CONFIRM → DONOR POPUP → RECEIVER POPUP (JSON) ───────────────
 @login_required
 @require_POST
-def receiver_confirm_call(request, request_id):
-    """Step 2: Receiver confirms they spoke to the donor."""
-    contact_request = get_object_or_404(
-        DonorContactRequest, id=request_id, receiver=request.user
-    )
-    if not contact_request.receiver_confirmed_call:
-        contact_request.receiver_confirmed_call = True
-        contact_request.receiver_confirmed_at = timezone.now()
-        contact_request.status = 'receiver_confirmed'
-        contact_request.save()
-
-        log_activity(request.user, 'receiver_confirmed_call', f"Request {request_id}", request)
-        # Notify donor
-        create_notification(
-            contact_request.donor_profile.user,
-            'Receiver Confirmed Call',
-            'The person looking for blood has confirmed speaking with you. Please respond from your dashboard.',
-            'call_confirmed',
-            contact_request,
-        )
-
-    return JsonResponse({'success': True, 'status': contact_request.status})
-
-
-@login_required
-def donor_respond(request, request_id, action):
-    """Step 3: Donor confirms or declines."""
-    try:
-        donor_profile = request.user.donor_profile
-    except DonorProfile.DoesNotExist:
-        messages.error(request, _('You are not registered as a donor.'))
-        return redirect('core:home')
-
-    contact_request = get_object_or_404(
-        DonorContactRequest, id=request_id, donor_profile=donor_profile
-    )
-
-    if contact_request.donor_responded:
-        messages.info(request, _('You have already responded to this request.'))
-        return redirect('core:donor_dashboard')
-
-    if action == 'confirm':
-        contact_request.status = 'donor_confirmed'
-        contact_request.donor_responded = True
-        contact_request.donor_response_at = timezone.now()
-        contact_request.save()
-
-        log_activity(request.user, 'donor_confirmed', f"Request {request_id}", request)
-        create_notification(
-            contact_request.receiver,
-            'Donor Confirmed!',
-            f'Great news! The donor has confirmed willingness to donate blood.',
-            'donor_confirmed',
-            contact_request,
-        )
-        messages.success(request, _('Thank you! You confirmed your willingness to donate.'))
-
-    elif action == 'decline':
-        contact_request.status = 'donor_declined'
-        contact_request.donor_responded = True
-        contact_request.donor_response_at = timezone.now()
-        contact_request.save()
-
-        log_activity(request.user, 'donor_declined', f"Request {request_id}", request)
-        create_notification(
-            contact_request.receiver,
-            'Donor Unavailable',
-            'The donor is currently unable to donate. Please search for another donor.',
-            'donor_declined',
-            contact_request,
-        )
-        messages.info(request, _('Response saved. Thank you for letting us know.'))
-
-    return redirect('core:donor_dashboard')
-
-
-@login_required
-def check_status(request, request_id):
-    """AJAX endpoint to poll contact request status."""
-    contact_request = get_object_or_404(
-        DonorContactRequest, id=request_id
-    )
-    # Only allow receiver or donor to check
-    is_receiver = contact_request.receiver == request.user
-    is_donor = hasattr(request.user, 'donor_profile') and contact_request.donor_profile == request.user.donor_profile
-    if not (is_receiver or is_donor):
-        return JsonResponse({'error': 'Forbidden'}, status=403)
-
-    # Mark notification as read if checking
-    unread = Notification.objects.filter(
-        user=request.user, contact_request=contact_request, is_read=False
-    )
-    unread.update(is_read=True)
-
-    return JsonResponse({
-        'status': contact_request.status,
-        'receiver_confirmed': contact_request.receiver_confirmed_call,
-        'donor_responded': contact_request.donor_responded,
-        'whatsapp_opened': contact_request.whatsapp_opened,
-        'location_sent': contact_request.location_whatsapp_opened,
-    })
-
-
-@login_required
-def whatsapp_confirmation(request, request_id):
-    """Generate WhatsApp confirmation URL and mark as opened."""
-    contact_request = get_object_or_404(
-        DonorContactRequest, id=request_id, receiver=request.user
-    )
-    if contact_request.status != 'donor_confirmed':
-        messages.error(request, _('WhatsApp confirmation is only available after donor confirms.'))
-        return redirect('core:receiver_dashboard')
-
-    donor = contact_request.donor_profile
+def api_call_start(request, donor_id):
+    """Receiver pressed Call Now. Returns the tel: URI; nothing is dialled by the server."""
+    donor = get_object_or_404(DonorProfile.objects.searchable(), id=donor_id)
+    refresh_due_donors()
+    donor.refresh_from_db()
+    if donor.user_id == request.user.id:
+        return json_error(tr('You cannot call yourself.'), 400)
+    if not donor.is_available:
+        return json_error(tr('This donor is currently unavailable.'), 409)
     if not donor.share_contact:
-        messages.error(request, _('The donor has not consented to share contact details.'))
-        return redirect('core:receiver_dashboard')
+        return json_error(tr('This donor has not agreed to be contacted.'), 403)
 
-    wa_number = donor.get_whatsapp_number()
-    wa_message = (
-        f"Hello, this is regarding our blood donation conversation through Sanjeevani. "
-        f"Thank you for confirming your willingness to donate blood. "
-        f"I would like to coordinate the next steps with you."
-    )
-    wa_url = f"https://wa.me/{wa_number}?text={urllib.parse.quote(wa_message)}"
+    existing = DonorContactRequest.objects.filter(
+        receiver=request.user, donor_profile=donor, status__in=OPEN_STATUSES).first()
+    if existing and existing.status != 'initiated':
+        return JsonResponse({'ok': True, 'duplicate': True, 'status': existing.status,
+                             'request_id': existing.id, 'tel': f'tel:+91{donor.mobile}'})
+    since = timezone.now() - timedelta(hours=24)
+    if DonorContactRequest.objects.filter(receiver=request.user, created_at__gte=since).count() >= 20:
+        return json_error(tr('Too many requests today. Please try again later.'), 429)
 
-    # Mark opened
-    if not contact_request.whatsapp_opened:
-        contact_request.whatsapp_opened = True
-        contact_request.whatsapp_opened_at = timezone.now()
-        contact_request.status = 'whatsapp_sent'
-        contact_request.save()
-        log_activity(request.user, 'whatsapp_confirmation_opened', f"Request {request_id}", request)
-
-    return render(request, 'donors/whatsapp_confirm.html', {
-        'contact_request': contact_request,
-        'donor': donor,
-        'wa_url': wa_url,
-    })
+    req = existing or DonorContactRequest.objects.create(receiver=request.user, donor_profile=donor)
+    if existing:
+        DonorContactRequest.objects.filter(pk=existing.pk).update(created_at=timezone.now())
+    log_activity(request.user, 'call_start', f'donor={donor.id}', request)
+    return JsonResponse({'ok': True, 'duplicate': False, 'status': req.status,
+                         'request_id': req.id, 'tel': f'tel:+91{donor.mobile}'})
 
 
 @login_required
-def hospital_location(request, request_id):
-    """Step: Receiver shares hospital location."""
-    contact_request = get_object_or_404(
-        DonorContactRequest, id=request_id, receiver=request.user
-    )
+@require_POST
+def api_call_confirm(request, request_id):
+    """Receiver answers 'Did you successfully connect with the donor?'"""
+    req = get_object_or_404(DonorContactRequest, id=request_id, receiver=request.user)
+    connected = request.POST.get('connected') == 'yes'
+    if connected:
+        updated = DonorContactRequest.objects.filter(pk=req.pk, status='initiated').update(
+            status='receiver_confirmed', receiver_confirmed_call=True,
+            receiver_confirmed_at=timezone.now())
+        if updated:   # only the first confirmation notifies the donor
+            create_notification(
+                req.donor_profile.user, tr('Blood Donation Request'),
+                tr('Someone has contacted you regarding blood donation. Are you willing to donate?'),
+                'donor_request', req)
+        return JsonResponse({'ok': True, 'status': 'receiver_confirmed', 'duplicate': not updated})
+    DonorContactRequest.objects.filter(pk=req.pk, status='initiated').update(status='not_connected')
+    return JsonResponse({'ok': True, 'status': 'not_connected'})
 
-    # Must have opened WhatsApp first
-    if not contact_request.whatsapp_opened:
-        messages.error(request, _('Please send the WhatsApp confirmation first.'))
-        return redirect('core:whatsapp_confirmation', request_id=request_id)
 
-    donor = contact_request.donor_profile
+@login_required
+@require_POST
+def api_respond(request, request_id):
+    """Donor accepts or declines inside the website. Only one response is ever stored."""
+    donor = get_donor(request.user)
+    req = get_object_or_404(DonorContactRequest, id=request_id, donor_profile=donor) if donor else None
+    if not req:
+        return json_error('Forbidden', 403)
+    action = request.POST.get('action')
+    if action not in ('accept', 'decline'):
+        return json_error('Invalid action')
+    if action == 'accept' and not donor.is_available:
+        return json_error(tr('You are currently unavailable, so you cannot accept this request.'), 409)
 
-    # Check if location already saved
-    try:
-        location = contact_request.hospital_location
-    except HospitalLocationDetails.DoesNotExist:
-        location = None
+    new_status = 'donor_confirmed' if action == 'accept' else 'donor_declined'
+    updated = DonorContactRequest.objects.filter(
+        pk=req.pk, status='receiver_confirmed', donor_responded=False,
+    ).update(status=new_status, donor_responded=True, donor_response_at=timezone.now())
+    if not updated:
+        return json_error(tr('This request has already been answered.'), 409)
 
-    form = HospitalLocationForm(request.POST or None, instance=location)
+    if action == 'accept':
+        create_notification(req.receiver, tr('Donor confirmed'),
+                            tr('The donor is willing to donate blood. Your request has been confirmed.'),
+                            'donor_confirmed', req)
+    else:
+        create_notification(req.receiver, tr('Donor unavailable'),
+                            tr('Sorry, this donor is currently unavailable.'), 'donor_declined', req)
+    return JsonResponse({'ok': True, 'status': new_status})
 
-    if request.method == 'POST' and form.is_valid():
-        with transaction.atomic():
-            loc = form.save(commit=False)
-            loc.contact_request = contact_request
-            loc.save()
 
-        # Prepare WhatsApp message
-        wa_number = donor.get_whatsapp_number()
-        wa_message = (
-            f"Hello, here is the hospital location for the blood donation.\n\n"
-            f"Hospital: {loc.hospital_name}\n\n"
-            f"Address: {loc.full_address}\n\n"
-            f"Google Maps: {loc.google_maps_link}\n\n"
-            f"Please check the location details."
-        )
-        wa_url = f"https://wa.me/{wa_number}?text={urllib.parse.quote(wa_message)}"
+@login_required
+@require_POST
+def api_ack(request, request_id):
+    req = get_object_or_404(DonorContactRequest, id=request_id, receiver=request.user)
+    DonorContactRequest.objects.filter(pk=req.pk).update(receiver_ack=True)
+    return JsonResponse({'ok': True})
 
-        return render(request, 'donors/hospital_location_preview.html', {
-            'contact_request': contact_request,
-            'donor': donor,
-            'location': loc,
-            'wa_url': wa_url,
-        })
 
-    return render(request, 'donors/hospital_location.html', {
-        'contact_request': contact_request,
-        'donor': donor,
-        'form': form,
-        'location': location,
-        'districts': KERALA_DISTRICTS,
+@login_required
+@require_GET
+def api_poll(request):
+    """Polled by the page every few seconds; everything comes from the database."""
+    now = timezone.now()
+    DonorContactRequest.objects.filter(
+        status='initiated', created_at__lt=now - timedelta(minutes=CALL_PENDING_MINUTES),
+    ).update(status='expired')
+    # a request the donor never answered for 3 days is closed
+    DonorContactRequest.objects.filter(
+        status='receiver_confirmed', donor_responded=False, created_at__lt=now - timedelta(days=3),
+    ).update(status='expired')
+
+    data = {
+        'unread': Notification.objects.filter(user=request.user, is_read=False).count(),
+        'donor_requests': [], 'receiver_updates': [], 'call_pending': None,
+    }
+    donor = get_donor(request.user)
+    if donor:
+        for r in DonorContactRequest.objects.filter(
+                donor_profile=donor, status='receiver_confirmed', donor_responded=False
+        ).order_by('created_at'):
+            data['donor_requests'].append({'id': r.id, 'can_accept': donor.is_available})
+
+    for r in DonorContactRequest.objects.filter(
+            receiver=request.user, status__in=('donor_confirmed', 'donor_declined'), receiver_ack=False
+    ).select_related('donor_profile__user').order_by('created_at'):
+        item = {'id': r.id, 'status': r.status}
+        if r.status == 'donor_confirmed':
+            dp = r.donor_profile
+            item.update(name=dp.get_display_name(), blood_group=dp.blood_group,
+                        locality=dp.locality, district=dp.get_district_display(),
+                        mobile=dp.mobile, hospital_url=f'/hospital/{r.id}/')
+        data['receiver_updates'].append(item)
+
+    pending = DonorContactRequest.objects.filter(
+        receiver=request.user, status='initiated',
+        created_at__gte=now - timedelta(minutes=CALL_PENDING_MINUTES),
+    ).select_related('donor_profile__user').order_by('-created_at').first()
+    if pending:
+        data['call_pending'] = {'id': pending.id, 'name': pending.donor_profile.get_display_name()}
+    return JsonResponse(data)
+
+
+# ─────────────────────────── HOSPITAL (GOOGLE MAPS) ───────────────────────────
+def _receiver_request(request, request_id, statuses):
+    req = get_object_or_404(DonorContactRequest, id=request_id, receiver=request.user)
+    if req.status not in statuses:
+        return req, False
+    return req, True
+
+
+@login_required
+def hospital_select(request, request_id):
+    req, ok = _receiver_request(request, request_id, ('donor_confirmed', 'hospital_selected', 'location_sent'))
+    if not ok:
+        messages.warning(request, tr('The donor has not confirmed this request yet.'))
+        return redirect('core:receiver_dashboard')
+    hospital = getattr(req, 'hospital_location', None)
+    return render(request, 'donors/hospital_select.html', {
+        'req': req, 'hospital': hospital,
+        'maps_key': settings.GOOGLE_MAPS_API_KEY,
     })
 
 
 @login_required
 @require_POST
-def mark_whatsapp_sent(request, request_id):
-    contact_request = get_object_or_404(DonorContactRequest, id=request_id, receiver=request.user)
-    contact_request.whatsapp_opened = True
-    contact_request.whatsapp_opened_at = timezone.now()
-    if contact_request.status == 'donor_confirmed':
-        contact_request.status = 'whatsapp_sent'
-    contact_request.save()
-    return JsonResponse({'success': True})
+def api_hospital_save(request, request_id):
+    req, ok = _receiver_request(request, request_id, ('donor_confirmed', 'hospital_selected', 'location_sent'))
+    if not ok:
+        return json_error('Forbidden', 403)
+    try:
+        body = json.loads(request.body.decode('utf-8'))
+        name = str(body.get('name', '')).strip()[:200]
+        address = str(body.get('address', '')).strip()[:1000]
+        place_id = str(body.get('place_id', '')).strip()[:300]
+        lat = Decimal(str(body.get('lat'))).quantize(Decimal('0.000001'))
+        lng = Decimal(str(body.get('lng'))).quantize(Decimal('0.000001'))
+    except (ValueError, InvalidOperation, TypeError):
+        return json_error(tr('Invalid hospital details.'))
+    if not name or not address or not (Decimal(-90) <= lat <= Decimal(90)) or not (Decimal(-180) <= lng <= Decimal(180)):
+        return json_error(tr('Please provide the hospital name, address and a valid location.'))
+
+    url = build_navigation_url(lat, lng, place_id)
+    HospitalLocationDetails.objects.update_or_create(
+        contact_request=req,
+        defaults=dict(hospital_name=name, full_address=address, latitude=lat, longitude=lng,
+                      place_id=place_id, google_maps_link=url, district=req.donor_profile.district),
+    )
+    if req.status == 'donor_confirmed':
+        DonorContactRequest.objects.filter(pk=req.pk, status='donor_confirmed').update(
+            status='hospital_selected', receiver_ack=True)
+    return JsonResponse({'ok': True, 'redirect': f'/hospital/{req.id}/share/'})
+
+
+@login_required
+def hospital_share(request, request_id):
+    req, ok = _receiver_request(request, request_id, ('hospital_selected', 'location_sent'))
+    hospital = getattr(req, 'hospital_location', None) if ok else None
+    if not hospital:
+        return redirect('core:hospital_select', request_id=req.id)
+    return render(request, 'donors/hospital_share.html', {
+        'req': req, 'hospital': hospital,
+        'whatsapp_url': build_whatsapp_url(req.donor_profile.mobile, hospital),
+    })
 
 
 @login_required
 @require_POST
 def mark_location_sent(request, request_id):
-    contact_request = get_object_or_404(DonorContactRequest, id=request_id, receiver=request.user)
-    contact_request.location_whatsapp_opened = True
-    contact_request.location_whatsapp_opened_at = timezone.now()
-    contact_request.status = 'location_sent'
-    contact_request.save()
-    log_activity(request.user, 'location_whatsapp_opened', f"Request {request_id}", request)
-    return JsonResponse({'success': True})
+    """Called when the receiver opens WhatsApp Click-to-Chat (they still press Send)."""
+    req = get_object_or_404(DonorContactRequest, id=request_id, receiver=request.user)
+    if req.status == 'hospital_selected':
+        DonorContactRequest.objects.filter(pk=req.pk, status='hospital_selected').update(
+            status='location_sent', location_whatsapp_opened=True, location_whatsapp_opened_at=timezone.now())
+        create_notification(req.donor_profile.user, tr('Hospital location shared'),
+                            tr('The receiver has shared the hospital location with you on WhatsApp.'),
+                            'location_shared', req)
+    return JsonResponse({'ok': True})
 
 
-# ─────────────────────────── DASHBOARDS ───────────────────────────
-
+# ─────────────────────────── DONOR PROFILE ───────────────────────────
 @login_required
 def donor_dashboard(request):
-    """Dashboard for registered donors."""
-    try:
-        profile = request.user.donor_profile
-    except DonorProfile.DoesNotExist:
-        messages.info(request, _('Please register as a donor to access the donor dashboard.'))
-        return redirect('core:register')
-
-    # Pending contact requests (receiver confirmed, donor not responded)
-    pending_requests = DonorContactRequest.objects.filter(
-        donor_profile=profile,
-        receiver_confirmed_call=True,
-        donor_responded=False,
-    ).select_related('receiver').order_by('-created_at')
-
-    # Recent contact history
-    recent_contacts = DonorContactRequest.objects.filter(
-        donor_profile=profile,
-    ).select_related('receiver').order_by('-created_at')[:10]
-
-    # Notifications
-    notifications = Notification.objects.filter(
-        user=request.user
-    ).order_by('-created_at')[:10]
-
-    unread_notifs = Notification.objects.filter(user=request.user, is_read=False).count()
-
-    context = {
-        'profile': profile,
-        'pending_requests': pending_requests,
-        'recent_contacts': recent_contacts,
-        'notifications': notifications,
-        'unread_notifs': unread_notifs,
-        'districts': dict(KERALA_DISTRICTS),
-    }
-    return render(request, 'dashboard/donor.html', context)
+    donor = get_donor(request.user)
+    if not donor:
+        return redirect('core:receiver_dashboard')
+    refresh_due_donors()
+    donor.refresh_from_db()
+    return render(request, 'dashboard/donor.html', {
+        'donor': donor,
+        'history': donor.donations.filter(status='completed')[:5],
+        'cfg': EligibilitySettings.load(),
+        'needs_dob': donor.date_of_birth is None,
+        'next_reminder': donor.reminders.filter(status='pending').first(),
+    })
 
 
 @login_required
-def receiver_dashboard(request):
-    """Dashboard for receivers (people looking for blood)."""
-    my_requests = DonorContactRequest.objects.filter(
-        receiver=request.user
-    ).select_related('donor_profile', 'donor_profile__user').order_by('-created_at')
+def donation_update(request):
+    donor = get_donor(request.user)
+    if not donor:
+        return redirect('core:register')
+    if not donor.date_of_birth:
+        messages.warning(request, tr('Please add your date of birth first.'))
+        return redirect('core:edit_profile')
+    form = DonationUpdateForm(request.POST or None, donor=donor)
+    if request.method == 'POST' and form.is_valid():
+        try:
+            record_donation(donor, form.cleaned_data['donation_date'], form.cleaned_data['donation_type'])
+        except IntegrityError:
+            form.add_error('donation_date', tr('A donation is already recorded for this date.'))
+        else:
+            donor.refresh_from_db()
+            messages.success(request, tr('Donation saved. Your status is now Unavailable until your next eligible date.'))
+            return redirect('core:donor_dashboard')
+    return render(request, 'dashboard/donation_update.html', {'form': form, 'donor': donor, 'today': today().isoformat()})
 
-    notifications = Notification.objects.filter(
-        user=request.user
-    ).order_by('-created_at')[:10]
 
-    unread_notifs = Notification.objects.filter(user=request.user, is_read=False).count()
-
-    context = {
-        'my_requests': my_requests,
-        'notifications': notifications,
-        'unread_notifs': unread_notifs,
-    }
-    return render(request, 'dashboard/receiver.html', context)
+@login_required
+def donation_history(request):
+    donor = get_donor(request.user)
+    if not donor:
+        return redirect('core:register')
+    return render(request, 'dashboard/donation_history.html', {
+        'donor': donor, 'records': donor.donations.filter(status='completed')})
 
 
 @login_required
 def edit_profile(request):
-    """Edit donor profile."""
-    try:
-        profile = request.user.donor_profile
-    except DonorProfile.DoesNotExist:
-        messages.error(request, _('No donor profile found.'))
-        return redirect('core:home')
-
-    form = DonorProfileEditForm(request.POST or None, instance=profile)
+    donor = get_donor(request.user)
+    if not donor:
+        return redirect('core:register')
+    form = DonorProfileEditForm(request.POST or None, instance=donor)
     if request.method == 'POST' and form.is_valid():
-        profile = form.save(commit=False)
-        # Update user name
-        full_name = form.cleaned_data.get('full_name', '')
-        if full_name:
-            parts = full_name.split(' ', 1)
-            request.user.first_name = parts[0]
-            request.user.last_name = parts[1] if len(parts) > 1 else ''
+        with transaction.atomic():
+            obj = form.save()
+            name = form.cleaned_data['full_name'].strip().split(' ', 1)
+            request.user.first_name = name[0]
+            request.user.last_name = name[1] if len(name) > 1 else ''
             request.user.save()
-        profile.save()
-        messages.success(request, _('Profile updated successfully.'))
+            recalc_donor(obj)
+        messages.success(request, tr('Profile updated successfully.'))
         return redirect('core:donor_dashboard')
+    return render(request, 'dashboard/edit_profile.html', {
+        'form': form, 'donor': donor, 'adult_cutoff': eligibility.adult_cutoff(today()).isoformat(),
+        'today': today().isoformat()})
 
-    return render(request, 'dashboard/edit_profile.html', {'form': form, 'profile': profile})
+
+@login_required
+def notification_settings(request):
+    donor = get_donor(request.user)
+    if not donor:
+        return redirect('core:register')
+    form = NotificationSettingsForm(request.POST or None, instance=donor)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, tr('Notification settings saved.'))
+        return redirect('core:notification_settings')
+    return render(request, 'dashboard/notification_settings.html', {
+        'form': form, 'donor': donor,
+        'push_ready': push_configured(), 'vapid_public_key': settings.VAPID_PUBLIC_KEY,
+        'subscriptions': request.user.push_subscriptions.filter(is_active=True).count(),
+        'next_reminder': donor.reminders.filter(status='pending').first(),
+    })
 
 
-# ─────────────────────────── NOTIFICATIONS ───────────────────────────
+@login_required
+@require_POST
+def push_subscribe(request):
+    try:
+        body = json.loads(request.body.decode('utf-8'))
+        endpoint = body['endpoint']
+        keys = body['keys']
+        p256dh, auth = keys['p256dh'], keys['auth']
+    except (ValueError, KeyError, TypeError):
+        return json_error('Invalid subscription')
+    if not str(endpoint).startswith('https://') or len(endpoint) > 700:
+        return json_error('Invalid endpoint')
+    PushSubscription.objects.update_or_create(
+        endpoint=endpoint,
+        defaults=dict(user=request.user, p256dh=p256dh[:255], auth=auth[:255], is_active=True,
+                      failure_count=0, user_agent=request.META.get('HTTP_USER_AGENT', '')[:255]),
+    )
+    return JsonResponse({'ok': True})
+
+
+@login_required
+@require_POST
+def push_unsubscribe(request):
+    try:
+        endpoint = json.loads(request.body.decode('utf-8')).get('endpoint', '')
+    except ValueError:
+        return json_error('Invalid request')
+    PushSubscription.objects.filter(user=request.user, endpoint=endpoint).delete()
+    return JsonResponse({'ok': True})
+
+
+def service_worker(request):
+    resp = HttpResponse(render_to_string('sw.js'), content_type='application/javascript')
+    resp['Service-Worker-Allowed'] = '/'
+    resp['Cache-Control'] = 'no-cache'
+    return resp
+
+
+@login_required
+def receiver_dashboard(request):
+    reqs = (DonorContactRequest.objects.filter(receiver=request.user)
+            .select_related('donor_profile__user').order_by('-created_at')[:50])
+    return render(request, 'dashboard/receiver.html', {'requests': reqs})
+
 
 @login_required
 def notifications(request):
-    notifs = Notification.objects.filter(user=request.user).order_by('-created_at')
+    notifs = Notification.objects.filter(user=request.user).order_by('-created_at')[:100]
     Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
     return render(request, 'notifications.html', {'notifications': notifs})
 
 
 @login_required
+@require_POST
 def mark_notification_read(request, notif_id):
-    notif = get_object_or_404(Notification, id=notif_id, user=request.user)
-    notif.is_read = True
-    notif.save()
+    Notification.objects.filter(id=notif_id, user=request.user).update(is_read=True)
     return JsonResponse({'success': True})
 
 
@@ -606,7 +570,6 @@ def mark_all_read(request):
 
 
 # ─────────────────────────── STATIC PAGES ───────────────────────────
-
 def about(request):
     return render(request, 'pages/about.html')
 
@@ -615,7 +578,7 @@ def contact(request):
     form = ContactForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         form.save()
-        messages.success(request, _('Thank you for your message. We will get back to you soon.'))
+        messages.success(request, tr('Thank you for your message. We will get back to you soon.'))
         return redirect('core:contact')
     return render(request, 'pages/contact.html', {'form': form})
 
@@ -632,15 +595,46 @@ def terms(request):
 @require_POST
 def report_abuse(request, donor_id):
     donor = get_object_or_404(DonorProfile, id=donor_id)
-    reason = request.POST.get('reason', '')
+    reason = request.POST.get('reason', '').strip()
     if reason:
         AbuseReport.objects.create(reporter=request.user, reported_donor=donor, reason=reason)
-        messages.success(request, _('Report submitted. Our team will review it.'))
+        messages.success(request, tr('Report submitted. Our team will review it.'))
     return redirect('core:donor_directory')
 
 
-# ─────────────────────────── ERROR HANDLERS ───────────────────────────
+# ─────────────────────────── STAFF DASHBOARD ───────────────────────────
+@staff_member_required
+def admin_dashboard(request):
+    refresh_due_donors()
+    donors = DonorProfile.objects.all()
+    q = request.GET.get('q', '').strip()
+    found = None
+    if q:
+        found = donors.filter(
+            Q(mobile__icontains=q) | Q(user__first_name__icontains=q) | Q(user__last_name__icontains=q)
+            | Q(locality__icontains=q)).select_related('user')[:50]
 
+    blood_stats = (donors.values('blood_group').annotate(
+        total=Count('id'), available=Count('id', filter=Q(is_available=True))).order_by('blood_group'))
+    district_stats = (donors.values('district').annotate(
+        total=Count('id'), available=Count('id', filter=Q(is_available=True))).order_by('district'))
+    dup_groups = (donors.exclude(date_of_birth=None).values('user__first_name', 'user__last_name', 'date_of_birth')
+                  .order_by().annotate(n=Count('id')).filter(n__gt=1))
+    cfg = EligibilitySettings.load()
+    return render(request, 'dashboard/admin_dashboard.html', {
+        'total': donors.count(),
+        'available': donors.filter(is_available=True).count(),
+        'unavailable': donors.filter(is_available=False).count(),
+        'missing_dob': donors.filter(date_of_birth__isnull=True).count(),
+        'blood_stats': blood_stats, 'district_stats': district_stats,
+        'dup_groups': dup_groups, 'found': found, 'q': q, 'cfg': cfg,
+        'requests': DonorContactRequest.objects.select_related('receiver', 'donor_profile__user')[:15],
+        'reminders': Reminder.objects.select_related('donor__user').order_by('-created_at')[:15],
+        'recent_donations': DonationRecord.objects.select_related('donor__user')[:15],
+    })
+
+
+# ─────────────────────────── ERROR HANDLERS ───────────────────────────
 def custom_404(request, exception):
     return render(request, 'errors/404.html', status=404)
 

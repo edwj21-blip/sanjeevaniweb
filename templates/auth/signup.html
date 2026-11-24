@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load sj %}
+{% block title %}{% t "Create a receiver account" %} – SANJEEVANI{% endblock %}
+{% block content %}
+<div class="container py-5" style="max-width:480px">
+  <div class="sj-card sj-card-body p-4">
+    <h3>{% t "Create a receiver account" %}</h3>
+    <p class="sj-lead">{% t "An account lets you contact donors and share the hospital location." %}</p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      {% t "Full Name" as l %}{% include "_field.html" with field=form.full_name label=l %}
+      {% t "Mobile Number" as l %}{% include "_field.html" with field=form.mobile label=l %}
+      {% t "Password" as l %}{% include "_field.html" with field=form.password label=l %}
+      {% t "Confirm Password" as l %}{% include "_field.html" with field=form.confirm_password label=l %}
+      <button class="btn btn-sj btn-lg w-100">{% t "Create account" %}</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

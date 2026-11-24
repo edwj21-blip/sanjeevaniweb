@@ -1,37 +1,38 @@
-{% load i18n %}
-<div class="sj-donor-card h-100">
-  <div class="sj-donor-card-header">
-    <div class="sj-blood-badge">{{ donor.blood_group }}</div>
-    <div class="sj-avail-badge {% if donor.is_available %}sj-avail-yes{% else %}sj-avail-no{% endif %}">
-      <i class="bi {% if donor.is_available %}bi-circle-fill{% else %}bi-circle{% endif %} me-1" style="font-size:0.5rem;vertical-align:middle;"></i>
-      {% if donor.is_available %}{% trans "Available" %}{% else %}{% trans "Unavailable" %}{% endif %}
-    </div>
-  </div>
-  <div class="sj-donor-card-body">
-    <h5 class="sj-donor-name">{{ donor.get_display_name }}</h5>
-    <div class="sj-donor-info">
-      <span><i class="bi bi-geo-alt-fill text-danger me-1"></i>{{ donor.locality }}, {{ donor.get_district_display }}</span>
-    </div>
-    {% if donor.show_last_donation_date and donor.last_donation_date %}
-    <div class="sj-donor-info">
-      <span><i class="bi bi-calendar3 text-secondary me-1"></i>{% trans "Last Donated" %}: {{ donor.last_donation_date }}</span>
-    </div>
+{% load sj %}
+<div class="sj-card donor-card">
+  <div class="top">
+    <span class="blood-pill">{{ donor.blood_group }}</span>
+    {% if donor.is_available %}
+      <span class="badge-avail"><i class="bi bi-circle-fill" style="font-size:.5rem"></i> {% t "Available" %}</span>
+    {% else %}
+      <span class="badge-unavail"><i class="bi bi-circle-fill" style="font-size:.5rem"></i> {% t "Unavailable" %}</span>
     {% endif %}
   </div>
-  <div class="sj-donor-card-actions">
-    {% if user.is_authenticated %}
-      <a href="{% url 'core:initiate_contact' donor.id %}" class="btn sj-btn-call btn-sm flex-fill">
-        <i class="bi bi-telephone-fill me-1"></i>{% trans "Contact" %}
-      </a>
-      {% if donor.share_contact %}
-      <a href="tel:{{ donor.mobile }}" class="btn sj-btn-whatsapp btn-sm flex-fill" onclick="logCall({{ donor.id }})">
-        <i class="bi bi-telephone me-1"></i>{% trans "Call" %}
-      </a>
+  <div class="body">
+    <div class="name">{{ donor.get_display_name }}</div>
+    <div class="meta"><i class="bi bi-geo-alt"></i> {{ donor.locality }}, {{ donor.district|dist_label }}</div>
+    {% if donor.show_last_donation_date and donor.last_donation_date %}
+      <div class="meta"><i class="bi bi-calendar-check"></i> {% t "Last Donation" %}: {{ donor.last_donation_date|date:"d M Y" }}</div>
+    {% endif %}
+    {% if not donor.is_available and donor.next_eligible_date %}
+      <div class="meta"><i class="bi bi-hourglass-split"></i> {% t "Next Eligible Date" %}: <strong>{{ donor.next_eligible_date|date:"d M Y" }}</strong></div>
+    {% endif %}
+  </div>
+  <div class="foot">
+    {% if donor.is_available %}
+      {% if not donor.share_contact %}
+        <button class="btn btn-secondary w-100" disabled>{% t "Contact not permitted" %}</button>
+      {% elif user.is_authenticated %}
+        {% if my_donor and my_donor.id == donor.id %}
+          <button class="btn btn-secondary w-100" disabled>{% t "This is you" %}</button>
+        {% else %}
+          <button type="button" class="btn btn-sj w-100 js-call-btn" data-url="{% url 'core:api_call_start' donor.id %}"><i class="bi bi-telephone-fill"></i> {% t "Call Now" %}</button>
+        {% endif %}
+      {% else %}
+        <a href="{% url 'core:login' %}?next={{ request.get_full_path|urlencode }}" class="btn btn-sj w-100"><i class="bi bi-telephone-fill"></i> {% t "Login to Call" %}</a>
       {% endif %}
     {% else %}
-      <a href="{% url 'core:login' %}?next={% url 'core:donor_directory' %}" class="btn sj-btn-call btn-sm w-100">
-        <i class="bi bi-box-arrow-in-right me-1"></i>{% trans "Login to Contact" %}
-      </a>
+      <button class="btn btn-secondary w-100" disabled aria-disabled="true">{% t "Currently Unavailable" %}</button>
     {% endif %}
   </div>
 </div>

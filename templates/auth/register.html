@@ -1,158 +1,40 @@
 {% extends "base.html" %}
-{% load i18n %}
-
-{% block title %}{% trans "Register as Blood Donor" %} – Sanjeevani{% endblock %}
-
+{% load sj %}
+{% block title %}{% t "Register as Donor" %} – SANJEEVANI{% endblock %}
 {% block content %}
-<div class="container py-5">
-  <div class="row justify-content-center">
-    <div class="col-lg-8 col-xl-7">
-      <div class="text-center mb-4">
-        <div class="sj-auth-logo"><i class="bi bi-droplet-fill"></i></div>
-        <h2 class="sj-auth-title">{% trans "Register as Blood Donor" %}</h2>
-        <p class="text-muted">{% trans "Join thousands of voluntary donors in Kerala" %}</p>
+<div class="page-head"><div class="container">
+  <h2 class="mb-1">{% t "Register as Donor" %}</h2>
+  <p class="sj-lead mb-0">{% t "You must be at least 18 years old. Register once – no need to register again." %}</p>
+</div></div>
+<div class="container pb-4" style="max-width:760px">
+  {% if form.non_field_errors %}<div class="alert alert-danger">{{ form.non_field_errors }}</div>{% endif %}
+  <form method="post" novalidate class="sj-card sj-card-body p-4">
+    {% csrf_token %}
+    <div class="row">
+      <div class="col-md-6">{% t "Full Name" as l %}{% include "_field.html" with field=form.full_name label=l %}</div>
+      <div class="col-md-6">{% t "Mobile Number" as l %}{% t "10-digit Indian mobile number" as h %}{% include "_field.html" with field=form.mobile label=l hint=h %}</div>
+      <div class="col-md-6">
+        {% t "Date of Birth" as l %}{% t "Your age is calculated automatically." as h %}
+        {% include "_field.html" with field=form.date_of_birth label=l hint=h %}
+        <div id="dobLive" class="dob-live" aria-live="polite" style="margin-top:-.8rem;margin-bottom:1rem"></div>
       </div>
-
-      <div class="sj-form-card">
-        <form method="post" novalidate>
-          {% csrf_token %}
-
-          <!-- Personal Information -->
-          <div class="sj-form-section">
-            <h5 class="sj-form-section-title">
-              <i class="bi bi-person-fill me-2 text-danger"></i>{% trans "Personal Information" %}
-            </h5>
-            <div class="row g-3">
-              <div class="col-md-12">
-                <label class="form-label fw-semibold">{% trans "Full Name" %} <span class="text-danger">*</span></label>
-                {{ form.full_name }}
-                {% if form.full_name.errors %}
-                  <div class="text-danger small mt-1">{{ form.full_name.errors.0 }}</div>
-                {% endif %}
-              </div>
-              <div class="col-md-6">
-                <label class="form-label fw-semibold">{% trans "Mobile Number" %} <span class="text-danger">*</span></label>
-                {{ form.mobile }}
-                <div class="form-text">{% trans "This will be your login ID" %}</div>
-                {% if form.mobile.errors %}
-                  <div class="text-danger small mt-1">{{ form.mobile.errors.0 }}</div>
-                {% endif %}
-              </div>
-              <div class="col-md-6">
-                <label class="form-label fw-semibold">{% trans "Email Address" %}</label>
-                {{ form.email }}
-                {% if form.email.errors %}
-                  <div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>
-                {% endif %}
-              </div>
-              <div class="col-md-6">
-                <label class="form-label fw-semibold">{% trans "Password" %} <span class="text-danger">*</span></label>
-                {{ form.password }}
-                {% if form.password.errors %}
-                  <div class="text-danger small mt-1">{{ form.password.errors.0 }}</div>
-                {% endif %}
-              </div>
-              <div class="col-md-6">
-                <label class="form-label fw-semibold">{% trans "Confirm Password" %} <span class="text-danger">*</span></label>
-                {{ form.confirm_password }}
-                {% if form.confirm_password.errors %}
-                  <div class="text-danger small mt-1">{{ form.confirm_password.errors.0 }}</div>
-                {% endif %}
-              </div>
-            </div>
-          </div>
-
-          <!-- Donation Information -->
-          <div class="sj-form-section">
-            <h5 class="sj-form-section-title">
-              <i class="bi bi-droplet-fill me-2 text-danger"></i>{% trans "Donation Information" %}
-            </h5>
-            <div class="row g-3">
-              <div class="col-md-4">
-                <label class="form-label fw-semibold">{% trans "Blood Group" %} <span class="text-danger">*</span></label>
-                {{ form.blood_group }}
-                {% if form.blood_group.errors %}
-                  <div class="text-danger small mt-1">{{ form.blood_group.errors.0 }}</div>
-                {% endif %}
-              </div>
-              <div class="col-md-4">
-                <label class="form-label fw-semibold">{% trans "Kerala District" %} <span class="text-danger">*</span></label>
-                {{ form.district }}
-                {% if form.district.errors %}
-                  <div class="text-danger small mt-1">{{ form.district.errors.0 }}</div>
-                {% endif %}
-              </div>
-              <div class="col-md-4">
-                <label class="form-label fw-semibold">{% trans "Locality / Area" %} <span class="text-danger">*</span></label>
-                {{ form.locality }}
-                {% if form.locality.errors %}
-                  <div class="text-danger small mt-1">{{ form.locality.errors.0 }}</div>
-                {% endif %}
-              </div>
-              <div class="col-md-6">
-                <label class="form-label fw-semibold">{% trans "Last Blood Donation Date" %}</label>
-                {{ form.last_donation_date }}
-                {% if form.last_donation_date.errors %}
-                  <div class="text-danger small mt-1">{{ form.last_donation_date.errors.0 }}</div>
-                {% endif %}
-              </div>
-              <div class="col-md-6 d-flex align-items-center pt-4">
-                <div class="form-check">
-                  {{ form.is_available }}
-                  <label class="form-check-label fw-semibold ms-2">{% trans "I am currently available to donate" %}</label>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Privacy & Consent -->
-          <div class="sj-form-section">
-            <h5 class="sj-form-section-title">
-              <i class="bi bi-shield-check-fill me-2 text-danger"></i>{% trans "Privacy & Consent" %}
-            </h5>
-            <div class="d-flex flex-column gap-3">
-              <div class="form-check">
-                {{ form.show_in_directory }}
-                <label class="form-check-label ms-2">
-                  <strong>{% trans "Show my profile in the donor directory" %}</strong><br>
-                  <span class="text-muted small">{% trans "Your name, blood group, district and availability will be visible to searchers" %}</span>
-                </label>
-              </div>
-              <div class="form-check">
-                {{ form.share_contact }}
-                <label class="form-check-label ms-2">
-                  <strong>{% trans "Allow sharing my contact number" %}</strong><br>
-                  <span class="text-muted small">{% trans "Required for Call and WhatsApp features to work" %}</span>
-                </label>
-              </div>
-              <div class="form-check">
-                {{ form.show_last_donation_date }}
-                <label class="form-check-label ms-2">
-                  <strong>{% trans "Show my last donation date in directory" %}</strong><br>
-                  <span class="text-muted small">{% trans "Helps receivers know your donation history" %}</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {% if form.non_field_errors %}
-          <div class="alert alert-danger">
-            {% for error in form.non_field_errors %}{{ error }}{% endfor %}
-          </div>
-          {% endif %}
-
-          <div class="d-grid mt-4">
-            <button type="submit" class="btn sj-btn-primary btn-lg">
-              <i class="bi bi-person-plus-fill me-2"></i>{% trans "Register as Donor" %}
-            </button>
-          </div>
-        </form>
-
-        <div class="text-center mt-4">
-          <p class="text-muted">{% trans "Already registered?" %} <a href="{% url 'core:login' %}" class="text-danger fw-semibold">{% trans "Login here" %}</a></p>
-        </div>
-      </div>
+      <div class="col-md-6">{% t "Blood Group" as l %}{% include "_field.html" with field=form.blood_group label=l %}</div>
+      <div class="col-md-6">{% t "District" as l %}{% include "_field.html" with field=form.district label=l %}</div>
+      <div class="col-md-6">{% t "Locality" as l %}{% include "_field.html" with field=form.locality label=l %}</div>
+      <div class="col-md-6">{% t "Last Blood Donation Date (if any)" as l %}{% include "_field.html" with field=form.last_donation_date label=l %}</div>
+      <div class="col-md-6">{% t "Donation type" as l %}{% include "_field.html" with field=form.last_donation_type label=l %}</div>
+      <div class="col-md-6">{% t "Email (optional)" as l %}{% include "_field.html" with field=form.email label=l %}</div>
+      <div class="col-md-6">{% t "Password" as l %}{% include "_field.html" with field=form.password label=l %}</div>
+      <div class="col-md-6">{% t "Confirm Password" as l %}{% include "_field.html" with field=form.confirm_password label=l %}</div>
     </div>
-  </div>
+    <hr>
+    {% t "I consent to be contacted by people who need blood." as l %}{% include "_check.html" with field=form.share_contact label=l %}
+    {% t "I confirm that I am in good health and meet the blood donation eligibility conditions." as l %}{% include "_check.html" with field=form.health_declaration label=l %}
+    {% t "Show my profile in the public donor search" as l %}{% include "_check.html" with field=form.show_in_directory label=l %}
+    {% t "Show my last donation date publicly" as l %}{% include "_check.html" with field=form.show_last_donation_date label=l %}
+    <p class="small text-muted mt-3">{% t "Your date of birth and other private details are never shown publicly." %}</p>
+    <button class="btn btn-sj btn-lg w-100 mt-2">{% t "Register" %}</button>
+    <p class="text-center small mt-3 mb-0">{% t "Already registered?" %} <a href="{% url 'core:login' %}">{% t "Login" %}</a></p>
+  </form>
 </div>
 {% endblock %}

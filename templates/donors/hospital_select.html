@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% load static sj %}
+{% block title %}{% t "Select Hospital" %} – SANJEEVANI{% endblock %}
+{% block content %}
+<div class="page-head"><div class="container">
+  <h2 class="mb-1">{% t "Select Hospital & Share Location" %}</h2>
+  <p class="sj-lead mb-0">{% t "Donor" %}: <strong>{{ req.donor_profile.get_display_name }}</strong> ({{ req.donor_profile.blood_group }})</p>
+</div></div>
+<div class="container"
+     id="hospitalApp"
+     data-save-url="{% url 'core:api_hospital_save' req.id %}"
+     {% if maps_key %}data-has-key="1"{% endif %}
+     {% if hospital %}data-name="{{ hospital.hospital_name }}" data-address="{{ hospital.full_address }}" data-lat="{{ hospital.latitude|stringformat:'s' }}" data-lng="{{ hospital.longitude|stringformat:'s' }}" data-place-id="{{ hospital.place_id }}"{% endif %}>
+
+  <div id="hospMsg" class="alert d-none"></div>
+  <div id="manualNote" class="alert alert-warning d-none">{% t "The map is unavailable. Enter the hospital name, address and coordinates manually below." %}</div>
+
+  <div class="row g-4">
+    <div class="col-lg-7">
+      <div class="input-group mb-3">
+        <input id="hSearch" type="search" class="form-control" placeholder="{% t 'Search hospital name or location' %}" aria-label="{% t 'Search Hospital' %}">
+        <button class="btn btn-sj" id="hSearchBtn" type="button"><i class="bi bi-search"></i> {% t "Search Hospital" %}</button>
+      </div>
+      <button class="btn btn-outline-sj btn-sm mb-3" id="hNearbyBtn" type="button"><i class="bi bi-geo"></i> {% t "Search Nearby Hospitals" %}</button>
+      <div id="map" role="application" aria-label="Google Map"></div>
+      <p class="small text-muted mt-2">{% t "Drag the marker or tap the map to adjust the location." %}</p>
+    </div>
+    <div class="col-lg-5">
+      <div id="results" class="mb-3" style="max-height:220px;overflow:auto"></div>
+      <div class="sj-card sj-card-body">
+        <h6>{% t "Selected hospital" %}</h6>
+        <div class="mb-2"><label class="form-label small">{% t "Hospital Name" %}</label><input id="hName" class="form-control"></div>
+        <div class="mb-2"><label class="form-label small">{% t "Full Address" %}</label><textarea id="hAddress" class="form-control" rows="3"></textarea></div>
+        <div class="row g-2 mb-3">
+          <div class="col-6"><label class="form-label small">{% t "Latitude" %}</label><input id="hLat" class="form-control" inputmode="decimal"></div>
+          <div class="col-6"><label class="form-label small">{% t "Longitude" %}</label><input id="hLng" class="form-control" inputmode="decimal"></div>
+        </div>
+        <button class="btn btn-sj btn-lg w-100" id="confirmBtn" type="button" disabled><i class="bi bi-check2-circle"></i> {% t "Confirm Location" %}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script id="hospitalI18n" type="application/json">{"noResults":"{% tjs 'No hospitals found. Try a different search.' %}","searching":"{% tjs 'Searching…' %}","apiError":"{% tjs 'Google Maps could not complete the request. You can enter the details manually.' %}","noGeo":"{% tjs 'Your location is not available. Search by name instead.' %}","incomplete":"{% tjs 'Please provide the hospital name, address and a valid location.' %}","authFail":"{% tjs 'Google Maps could not be authorised (check the API key and billing). You can enter the details manually.' %}","noKey":"{% tjs 'Google Maps is not configured on this server. You can enter the details manually.' %}"}</script>
+<script src="{% static 'js/hospital.js' %}"></script>
+{% if maps_key %}
+<script async src="https://maps.googleapis.com/maps/api/js?key={{ maps_key }}&loading=async&callback=initHospitalMap&v=weekly&language={{ LANGUAGE_CODE|default:'en' }}&region=IN"></script>
+{% endif %}
+{% endblock %}

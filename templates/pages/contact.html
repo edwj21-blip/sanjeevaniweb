@@ -1,95 +1,26 @@
 {% extends "base.html" %}
-{% load i18n %}
-
-{% block title %}{% trans "Contact Us" %} – Sanjeevani{% endblock %}
-
+{% load sj %}
+{% block title %}{% t "Contact" %} – SANJEEVANI{% endblock %}
 {% block content %}
-<div class="sj-page-header py-4 text-center">
-  <div class="container">
-    <h1 class="sj-page-title"><i class="bi bi-envelope-fill text-danger me-2"></i>{% trans "Contact Us" %}</h1>
-    <p class="sj-page-subtitle">{% trans "Have a question or feedback? We'd love to hear from you." %}</p>
-  </div>
-</div>
-
-<div class="container py-5">
-  <div class="row g-5">
-    <div class="col-lg-5">
-      <h4 class="mb-4">{% trans "Get in Touch" %}</h4>
-      <div class="d-flex flex-column gap-4">
-        <div class="d-flex gap-3 align-items-start">
-          <div class="sj-contact-icon-box"><i class="bi bi-telephone-fill text-danger"></i></div>
-          <div>
-            <h6 class="mb-1">{% trans "Phone" %}</h6>
-            <a href="tel:+919876543210" class="text-decoration-none text-dark">+91 98765 43210</a>
-          </div>
-        </div>
-        <div class="d-flex gap-3 align-items-start">
-          <div class="sj-contact-icon-box"><i class="bi bi-whatsapp text-success"></i></div>
-          <div>
-            <h6 class="mb-1">WhatsApp</h6>
-            <a href="https://wa.me/919876543210" target="_blank" class="text-decoration-none text-dark">+91 98765 43210</a>
-          </div>
-        </div>
-        <div class="d-flex gap-3 align-items-start">
-          <div class="sj-contact-icon-box"><i class="bi bi-envelope-fill text-primary"></i></div>
-          <div>
-            <h6 class="mb-1">{% trans "Email" %}</h6>
-            <a href="mailto:info@sanjeevani.kerala" class="text-decoration-none text-dark">info@sanjeevani.kerala</a>
-          </div>
-        </div>
-        <div class="d-flex gap-3 align-items-start">
-          <div class="sj-contact-icon-box"><i class="bi bi-geo-alt-fill text-danger"></i></div>
-          <div>
-            <h6 class="mb-1">{% trans "Service Area" %}</h6>
-            <p class="mb-0 text-muted">{% trans "All 14 Districts of Kerala, India" %}</p>
-          </div>
-        </div>
-      </div>
-      <div class="sj-info-box mt-4">
-        <p class="mb-0"><i class="bi bi-clock-fill text-warning me-2"></i>
-        {% trans "For blood emergencies, please call the donor directly using the Call Now button in the directory. This contact form is for general queries only." %}</p>
-      </div>
-    </div>
-
-    <div class="col-lg-7">
-      <div class="sj-form-card">
-        <h5 class="mb-4">{% trans "Send a Message" %}</h5>
-        <form method="post" novalidate>
-          {% csrf_token %}
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">{% trans "Your Name" %} *</label>
-              {{ form.name }}
-              {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>{% endif %}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">{% trans "Email Address" %} *</label>
-              {{ form.email }}
-              {% if form.email.errors %}<div class="text-danger small mt-1">{{ form.email.errors.0 }}</div>{% endif %}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">{% trans "Mobile" %}</label>
-              {{ form.mobile }}
-            </div>
-            <div class="col-md-6">
-              <label class="form-label fw-semibold">{% trans "Subject" %} *</label>
-              {{ form.subject }}
-              {% if form.subject.errors %}<div class="text-danger small mt-1">{{ form.subject.errors.0 }}</div>{% endif %}
-            </div>
-            <div class="col-12">
-              <label class="form-label fw-semibold">{% trans "Message" %} *</label>
-              {{ form.message }}
-              {% if form.message.errors %}<div class="text-danger small mt-1">{{ form.message.errors.0 }}</div>{% endif %}
-            </div>
-          </div>
-          <div class="d-grid mt-4">
-            <button type="submit" class="btn sj-btn-primary btn-lg">
-              <i class="bi bi-send-fill me-2"></i>{% trans "Send Message" %}
-            </button>
-          </div>
-        </form>
-      </div>
+<div class="page-head"><div class="container"><h2 class="mb-0">{% t "Contact" %}</h2></div></div>
+<div class="container"><div class="row g-4">
+  <div class="col-md-5">
+    <div class="sj-card sj-card-body">
+      <div class="info-row"><span class="k"><i class="bi bi-telephone"></i> {% t "Phone" %}</span><a href="tel:+919876543210">+91 98765 43210</a></div>
+      <div class="info-row"><span class="k"><i class="bi bi-envelope"></i> Email</span><a href="mailto:info@sanjeevani.kerala">info@sanjeevani.kerala</a></div>
+      <div class="info-row"><span class="k"><i class="bi bi-geo-alt"></i> {% t "Coverage" %}</span><span>{% t "All 14 districts of Kerala" %}</span></div>
     </div>
   </div>
-</div>
+  <div class="col-md-7">
+    <form method="post" class="sj-card sj-card-body" novalidate>
+      {% csrf_token %}
+      {% t "Full Name" as l %}{% include "_field.html" with field=form.name label=l %}
+      {% t "Email" as l %}{% include "_field.html" with field=form.email label=l %}
+      {% t "Mobile Number" as l %}{% include "_field.html" with field=form.mobile label=l %}
+      {% t "Subject" as l %}{% include "_field.html" with field=form.subject label=l %}
+      {% t "Message" as l %}{% include "_field.html" with field=form.message label=l %}
+      <button class="btn btn-sj btn-lg">{% t "Send Message" %}</button>
+    </form>
+  </div>
+</div></div>
 {% endblock %}

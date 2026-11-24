@@ -1,47 +1,21 @@
 {% extends "base.html" %}
-{% load i18n %}
-
-{% block title %}{% trans "Login" %} – Sanjeevani{% endblock %}
-
+{% load sj %}
+{% block title %}{% t "Login" %} – SANJEEVANI{% endblock %}
 {% block content %}
-<div class="container py-5">
-  <div class="row justify-content-center">
-    <div class="col-md-5 col-lg-4">
-      <div class="text-center mb-4">
-        <div class="sj-auth-logo"><i class="bi bi-droplet-fill"></i></div>
-        <h2 class="sj-auth-title">{% trans "Login to Sanjeevani" %}</h2>
-        <p class="text-muted">{% trans "Use your registered mobile number and password" %}</p>
-      </div>
-
-      <div class="sj-form-card">
-        <form method="post" novalidate>
-          {% csrf_token %}
-          <div class="mb-3">
-            <label class="form-label fw-semibold">{% trans "Mobile Number" %}</label>
-            {{ form.mobile }}
-            {% if form.mobile.errors %}
-              <div class="text-danger small mt-1">{{ form.mobile.errors.0 }}</div>
-            {% endif %}
-          </div>
-          <div class="mb-4">
-            <label class="form-label fw-semibold">{% trans "Password" %}</label>
-            {{ form.password }}
-            {% if form.password.errors %}
-              <div class="text-danger small mt-1">{{ form.password.errors.0 }}</div>
-            {% endif %}
-          </div>
-          <div class="d-grid">
-            <button type="submit" class="btn sj-btn-primary btn-lg">
-              <i class="bi bi-box-arrow-in-right me-2"></i>{% trans "Login" %}
-            </button>
-          </div>
-        </form>
-
-        <div class="text-center mt-4">
-          <p class="text-muted">{% trans "New to Sanjeevani?" %} <a href="{% url 'core:register' %}" class="text-danger fw-semibold">{% trans "Register as Donor" %}</a></p>
-        </div>
-      </div>
-    </div>
+<div class="container py-5" style="max-width:460px">
+  <div class="sj-card sj-card-body p-4">
+    <h3 class="mb-1">{% t "Login" %}</h3>
+    <p class="sj-lead">{% t "Log in with your mobile number." %}</p>
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      {% t "Mobile Number" as l %}{% include "_field.html" with field=form.mobile label=l %}
+      {% t "Password" as l %}{% include "_field.html" with field=form.password label=l %}
+      <button class="btn btn-sj btn-lg w-100">{% t "Login" %}</button>
+    </form>
+    <hr>
+    <p class="mb-1 small">{% t "New donor?" %} <a href="{% url 'core:register' %}">{% t "Register as Donor" %}</a></p>
+    <p class="mb-0 small">{% t "Need blood?" %} <a href="{% url 'core:signup' %}">{% t "Create a receiver account" %}</a></p>
   </div>
 </div>
 {% endblock %}

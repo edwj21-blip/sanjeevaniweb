@@ -37,6 +37,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    'core.middleware.ScheduledJobsMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
@@ -118,3 +119,18 @@ SESSION_COOKIE_AGE = 86400 * 30  # 30 days
 SESSION_SAVE_EVERY_REQUEST = True
 
 AUTH_USER_MODEL = 'auth.User'
+
+
+# ── Google Maps (hospital selection). Key comes from the environment only. ──
+GOOGLE_MAPS_API_KEY = config('GOOGLE_MAPS_API_KEY', default='')
+
+# ── Web Push (VAPID). Generate with: python manage.py generate_vapid_keys ──
+VAPID_PUBLIC_KEY = config('VAPID_PUBLIC_KEY', default='')
+VAPID_PRIVATE_KEY = config('VAPID_PRIVATE_KEY', default='')
+VAPID_CLAIM_EMAIL = config('VAPID_CLAIM_EMAIL', default='mailto:admin@example.com')
+
+# Run due reminders / re-activations opportunistically while the site is in use.
+# The management command `run_scheduled_jobs` (cron / Task Scheduler) is still the
+# recommended server-side scheduler so reminders go out even when nobody visits.
+RUN_JOBS_IN_REQUEST = config('RUN_JOBS_IN_REQUEST', default=True, cast=bool)
+JOBS_MIN_INTERVAL_SECONDS = 600
